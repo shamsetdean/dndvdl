@@ -1262,20 +1262,30 @@ document.getElementById("exportBtn").onclick = ()=>{
     summary = Object.entries(newCodes).map(([n,c])=>n+" : "+c).join("\n");
   }
 
-  // Code admin : regenere lui aussi, applique uniquement a CET appareil.
-  // Il ne fait jamais partie du fichier exporte (DATA ne le contient pas) —
-  // sinon n'importe quel destinataire du fichier pourrait devenir admin.
+  // Code admin : regenere lui aussi, applique uniquement a CET appareil,
+  // et SEULEMENT si l'administrateur confirme l'avoir note. Contrairement
+  // aux codes de consultation, une perte ici bloque l'acces admin lui-meme —
+  // donc jamais d'application automatique et silencieuse.
   let adminLine = "";
   if(!ADMIN_PIN_HASH){
     const adminCode = genCode();
-    storageSet(localStorage, "netmap_pin", adminCode);
-    adminLine = "\n\nTon nouveau code Administrateur (cet appareil uniquement) : " + adminCode;
+    const confirmed = confirm(
+      "Nouveau code Administrateur proposé : " + adminCode +
+      "\n\nNote-le maintenant — sans lui, plus d'accès admin sur cet appareil.\n\n" +
+      "OK pour l'appliquer maintenant, Annuler pour garder le code actuel."
+    );
+    if(confirmed){
+      storageSet(localStorage, "netmap_pin", adminCode);
+      adminLine = "\n\nCode Administrateur mis à jour (cet appareil uniquement) : " + adminCode;
+    } else {
+      adminLine = "\n\nCode Administrateur inchangé.";
+    }
   } else {
     adminLine = "\n\n(Code Administrateur géré par hash — voir README-SECURITE, non régénéré automatiquement ici.)";
   }
 
   if(names.length || !ADMIN_PIN_HASH){
-    alert("Nouveaux codes générés :\n\n"+summary+adminLine+"\n\nLes codes de consultation sont dans le fichier exporté, à communiquer individuellement. Ton code Administrateur n'y figure pas — note-le à part.");
+    alert("Nouveaux codes générés :\n\n"+summary+adminLine+"\n\nLes codes de consultation sont dans le fichier exporté, à communiquer individuellement. Le code Administrateur n'y figure jamais.");
   }
 
   const blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
