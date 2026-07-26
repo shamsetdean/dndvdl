@@ -197,7 +197,7 @@ function showLogin(){
   const scr = document.getElementById("loginScreen");
   scr.style.display = "flex";
   const baie = currentBaie();
-  scr.querySelector("#loginLieuLine").innerHTML = icon("mappin",13) + " " + baie.nom + " · " + baie.lieu;
+  scr.querySelector("#loginLieuLine").innerHTML = icon("mappin",13) + " " + baie.slug;
   document.getElementById("loginAdminBtn").innerHTML = icon("shield") + " Administrateur";
   const sel = document.getElementById("loginViewerSelect");
   sel.innerHTML = baie.viewers.length
@@ -249,6 +249,37 @@ function applyMode(){
   document.body.dataset.mode = mode;
   const badge = document.getElementById("sessionBadge");
   badge.innerHTML = mode==="admin" ? (icon("shield",13)+" Admin") : (icon("eye",13)+" "+(viewerName||"Consultation"));
+  renderWatermark();
+}
+
+// ---------------------------------------------------------------------------
+// FILIGRANE DE TRAÇABILITÉ
+// Aucune API web ne permet d'empêcher une capture d'écran. Ce filigrane ne
+// bloque rien : il fait en sorte qu'une capture porte le nom du consultant
+// et l'horodatage, pour que sa diffusion reste attribuable. Actif uniquement
+// en consultation — l'administrateur n'a pas besoin d'être filigrané
+// vis-à-vis de lui-même.
+let _watermarkTimer = null;
+function renderWatermark(){
+  let wm = document.getElementById("watermarkLayer");
+  if(mode !== "consult"){
+    if(wm) wm.remove();
+    if(_watermarkTimer) clearInterval(_watermarkTimer);
+    return;
+  }
+  if(!wm){
+    wm = document.createElement("div");
+    wm.id = "watermarkLayer";
+    document.body.appendChild(wm);
+  }
+  const paint = ()=>{
+    const stamp = (viewerName||"Consultation") + " · " + new Date().toLocaleString("fr-FR");
+    const tile = `<span>${stamp}</span>`;
+    wm.innerHTML = tile.repeat(60);
+  };
+  paint();
+  if(_watermarkTimer) clearInterval(_watermarkTimer);
+  _watermarkTimer = setInterval(paint, 30000);
 }
 document.getElementById("logoutBtn").innerHTML = icon("logout") + `<span class="btnLabel">Déconnexion</span>`;
 document.getElementById("logoutBtn").onclick = ()=>{
@@ -256,6 +287,8 @@ document.getElementById("logoutBtn").onclick = ()=>{
   if(mode==="admin") storageRemove(sessionStorage, "netmap_admin");
   else storageRemove(sessionStorage, "netmap_viewer_"+baie.id);
   selectedConnId = null; selectedExtra = null;
+  mode = null; viewerName = "";
+  renderWatermark();
   checkAccess();
 };
 
@@ -276,7 +309,7 @@ document.addEventListener("input", e=>{
 
 function renderBaiePicker(){
   const sel = document.getElementById("baiePicker");
-  sel.innerHTML = DATA.baies.map(b=>`<option value="${b.id}" ${b.id===currentBaieId?"selected":""}>${b.lieu} — ${b.nom}</option>`).join("");
+  sel.innerHTML = DATA.baies.map(b=>`<option value="${b.id}" ${b.id===currentBaieId?"selected":""}>${b.slug}</option>`).join("");
 }
 document.getElementById("baiePicker").addEventListener("change", e=>{
   const target = DATA.baies.find(b=>b.id===e.target.value);
@@ -563,7 +596,7 @@ function renderRack(){
     : `<div class="cell"><span class="k">${label}</span><span class="v">${value||"—"}</span></div>`;
   tb.innerHTML = `
     <div class="row">
-      <div class="cell"><span class="k">Document</span><span class="v">DNDVDL-MAP — ${baie.nom}</span></div>
+      <div class="cell"><span class="k">Document</span><span class="v">DNDVDL-MAP — ${baie.slug}</span></div>
       <div class="cell"><span class="k">Mise à jour</span><span class="v">${today}</span></div>
     </div>
     <div class="row">
@@ -943,11 +976,8 @@ function renderEquipContent(){
   const baie = currentBaie();
   let html = `<div class="equipCard">
     <div class="eqTitle">${icon("mappin",13)} Baie</div>
-    <label>Nom</label><input value="${baie.nom}" oninput="updateBaie('nom',this.value)">
-    <div class="row2">
-      <div><label>Lieu</label><input value="${baie.lieu}" oninput="updateBaie('lieu',this.value)"></div>
-      <div><label>Slug URL</label><input value="${baie.slug}" oninput="updateBaie('slug',this.value)"></div>
-    </div>
+    <label>Sigle (URL)</label><input value="${baie.slug}" oninput="updateBaie('slug',this.value)">
+    <div class="pinHint">Le nom et le lieu réels ne sont modifiables que dans le fichier de données, pas à l'écran.</div>
   </div>`;
   baieBandeaux().forEach(bd=>{
     html += `<div class="equipCard">
@@ -1033,7 +1063,7 @@ document.getElementById("qrCopyBtn").innerHTML = icon("download") + " Copier le 
 document.getElementById("qrBtn").onclick = ()=>{
   const baie = currentBaie();
   const url = baieUrl(baie);
-  document.getElementById("qrTitle").innerHTML = icon("qrcode",17) + " " + baie.nom;
+  document.getElementById("qrTitle").innerHTML = icon("qrcode",17) + " " + baie.slug;
   document.getElementById("qrUrl").textContent = url;
   renderQR(url, document.getElementById("qrContainer"));
   qrOverlay.classList.add("open");

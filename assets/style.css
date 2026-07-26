@@ -631,3 +631,20 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 ::-webkit-scrollbar-thumb{background:var(--edge); border-radius:999px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--edge-strong);}
 ::selection{background:rgba(255,255,255,.2); color:var(--ink);}
+
+#watermarkLayer{
+  position:fixed; inset:0; z-index:999; pointer-events:none;
+  display:flex; flex-wrap:wrap; align-content:flex-start;
+  gap:64px 48px; padding:24px;
+  transform:rotate(-22deg) scale(1.4);
+  transform-origin:center;
+  overflow:hidden;
+}
+#watermarkLayer span{
+  font-family:var(--font-data);
+  font-size:11px;
+  font-weight:500;
+  color:rgba(255,255,255,.055);
+  white-space:nowrap;
+  user-select:none;
+}
