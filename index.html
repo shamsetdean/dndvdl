@@ -175,6 +175,9 @@
 <script>
   window.DNDVDL_BAIE = null;
   window.DNDVDL_BASE = "./";
+  // Deploiement mono-page (GitHub) : aucun dossier par batiment n'existe ici,
+  // le changement de baie doit rester en memoire, jamais une navigation.
+  window.DNDVDL_MONOFILE = true;
 </script>
 <script src="./assets/qrcode.js"></script>
 <script src="./assets/app.js"></script>
