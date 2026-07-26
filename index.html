@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>DNDVDL-MAP</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Application de gestion de donnees locales">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#08090b">
+
+<!-- Installation iOS (Ajouter a l'ecran d'accueil) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DNDVDL-MAP">
+<link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+
+<link rel="stylesheet" href="./assets/style.css">
+</head>
+<body data-mode="consult">
+<div id="frameTR"></div><div id="frameBL"></div>
+
+<input type="file" id="fileImport" accept="application/json">
+
+<div id="loginScreen">
+  <div id="loginCard">
+    <h1>DNDVDL<span style="color:var(--ink-dim)">-MAP</span></h1>
+    <div class="loginLieu" id="loginLieuLine"></div>
+
+    <button class="btn primary" id="loginAdminBtn"></button>
+
+    <div id="loginDivider">ou consultation</div>
+
+    <label>Votre nom</label>
+    <select id="loginViewerSelect"></select>
+    <label>Mot de passe</label>
+    <input id="loginPassword" type="password">
+    <button class="btn" id="loginConsultBtn" style="margin-top:14px;"></button>
+    <div id="loginNote"></div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+<header>
+  <div class="brand"><h1>DNDVDL<em>-MAP</em></h1></div>
+  <select id="baiePicker"></select>
+  <div class="spacer"></div>
+  <span class="badge" id="sessionBadge"></span>
+  <button class="btn" id="qrBtn"></button>
+  <button class="btn" id="logoutBtn"></button>
+</header>
+
+<header style="border-top:1px solid var(--edge);">
+  <div class="searchWrap"></div>
+  <div class="actionsRow">
+    <button class="btn primary admin-only" id="addBtn"></button>
+    <button class="btn admin-only" id="equipBtn"></button>
+    <button class="btn admin-only" id="accessBtn"></button>
+    <button class="btn admin-only" id="exportBtn"></button>
+    <button class="btn" id="importBtn"></button>
+  </div>
+</header>
+
+<main>
+  <div id="rackWrap"><div id="rackCanvas"></div></div>
+  <div id="panel"></div>
+</main>
+</div>
+
+<!-- connexion modal -->
+<div id="overlay">
+  <div class="modalBox">
+    <h3 id="modalTitle">Nouvelle connexion</h3>
+    <label>Périphérique</label>
+    <input id="f_nom" placeholder="ex. PC-DIRECTION">
+    <div class="row2">
+      <div><label>Type</label>
+        <select id="f_type">
+          <option>PC</option><option>ordinateur portable</option><option>imprimante</option>
+          <option>téléphone IP</option><option>borne Wi-Fi</option><option>caméra IP</option>
+          <option>NAS</option><option>serveur</option><option>routeur</option><option>autre</option>
+        </select>
+      </div>
+      <div><label>Bureau</label><input id="f_bureau" placeholder="ex. Direction"></div>
+    </div>
+    <div class="row2">
+      <div><label>Bandeau</label><select id="f_bandeau"></select></div>
+      <div><label>Port bandeau</label><input id="f_portB" type="number" min="1"></div>
+    </div>
+    <div class="row2">
+      <div><label>Switch</label><select id="f_switch"></select></div>
+      <div><label>Port switch</label><input id="f_portS" type="number" min="1"></div>
+    </div>
+    <label>Prise murale</label>
+    <input id="f_prise" placeholder="ex. PM-DIR-01">
+    <div class="row2">
+      <div><label>IP (optionnel)</label><input id="f_ip" placeholder="192.168.1.x"></div>
+      <div><label>MAC (optionnel)</label><input id="f_mac" placeholder="AA:BB:CC…"></div>
+    </div>
+    <label>Couleur du câble</label>
+    <div class="swatches" id="f_couleur"></div>
+    <label>Commentaire</label>
+    <input id="f_comment" placeholder="optionnel">
+    <div class="modalActions">
+      <button class="btn" id="cancelBtn">Annuler</button>
+      <button class="btn primary" id="saveBtn">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- pin modal -->
+<div id="pinOverlay">
+  <div class="modalBox" style="max-width:320px;">
+    <h3 id="pinTitle">Code admin</h3>
+    <label id="pinLabel1">Code (4 chiffres min.)</label>
+    <input id="pin1" type="password" inputmode="numeric" maxlength="8">
+    <div id="pinConfirmWrap" style="display:none;">
+      <label>Confirmer le code</label>
+      <input id="pin2" type="password" inputmode="numeric" maxlength="8">
+    </div>
+    <div class="pinHint">Verrou local léger pour éviter les modifications accidentelles — pas une authentification forte.</div>
+    <div class="modalActions">
+      <button class="btn" id="pinCancelBtn">Annuler</button>
+      <button class="btn primary" id="pinSubmitBtn">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- equipment modal -->
+<div id="equipOverlay">
+  <div class="modalBox" style="max-width:460px;">
+    <h3 id="equipTitle">Équipements</h3>
+    <div id="equipContent"></div>
+    <div class="modalActions">
+      <button class="btn primary" id="equipCloseBtn" style="flex:none; width:100%;">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- access modal -->
+<div id="accessOverlay">
+  <div class="modalBox" style="max-width:400px;">
+    <h3 id="accessTitle">Accès consultation</h3>
+    <div id="accessContent"></div>
+    <div class="modalActions">
+      <button class="btn primary" id="accessCloseBtn" style="flex:none; width:100%;">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR modal -->
+<div id="qrOverlay">
+  <div class="modalBox" style="max-width:320px; text-align:center;">
+    <h3 id="qrTitle" style="justify-content:center;">Lien de la baie</h3>
+    <div id="qrContainer"></div>
+    <div id="qrUrl"></div>
+    <div class="modalActions">
+      <button class="btn" id="qrCopyBtn"></button>
+      <button class="btn primary" id="qrCloseBtn">Fermer</button>
+    </div>
+  </div>
+</div>
+<script>
+  window.DNDVDL_BAIE = null;
+  window.DNDVDL_BASE = "./";
+</script>
+<script src="./assets/qrcode.js"></script>
+<script src="./assets/app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js").catch(function(){});
+  }
+</script>
+</body>
+</html>
