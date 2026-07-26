@@ -197,7 +197,7 @@ function showLogin(){
   const scr = document.getElementById("loginScreen");
   scr.style.display = "flex";
   const baie = currentBaie();
-  scr.querySelector("#loginLieuLine").innerHTML = icon("mappin",13) + " " + baie.slug;
+  // Le sigle de baie n'est plus affiche ici : sans objet avant identification.
   document.getElementById("loginAdminBtn").innerHTML = icon("shield") + " Administrateur";
   const sel = document.getElementById("loginViewerSelect");
   sel.innerHTML = baie.viewers.length
