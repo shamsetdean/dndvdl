@@ -347,9 +347,10 @@ function render(){ renderRack(); renderPanel(); }
 function makeBar(category, item, iconName){
   const div = document.createElement("div");
   const isSel = selectedExtra && selectedExtra.type===category && selectedExtra.id===item.id;
-  // Le passe-cable est un guide physique : les cables passent DERRIERE lui,
-  // pas au-dessus. Classe dediee pour l'empilement visuel (voir CSS).
-  div.className = "rackBar" + (category==="tiroir" ? " cableGuide" : "") + (isSel ? " selected":"");
+  // Toute barre physique de la baie (tiroir, onduleur, NAS, equipement) masque
+  // le cable qui passe derriere elle, pas seulement le passe-cable — sinon le
+  // trait reapparait de facon incoherente selon l'obstacle traverse.
+  div.className = "rackBar cableGuide" + (isSel ? " selected":"");
   div.innerHTML = icon(iconName,15) + `<span>${item.label}</span>`;
   div.onclick = ()=>{ selectedExtra = {type:category, id:item.id}; selectedConnId=null; render(); };
   return div;
