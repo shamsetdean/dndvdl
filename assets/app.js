@@ -257,8 +257,67 @@ wireLoginCard();
 function applyMode(){
   document.body.dataset.mode = mode;
   const badge = document.getElementById("sessionBadge");
-  badge.innerHTML = mode==="admin" ? (icon("shield",13)+" Admin") : (icon("eye",13)+" "+(viewerName||"Consultation"));
+  if(previewingAs){
+    badge.innerHTML = icon("eye",13) + " " + previewingAs + " <span style='opacity:.6'>(aperçu admin)</span>";
+  } else {
+    badge.innerHTML = mode==="admin" ? (icon("shield",13)+" Admin") : (icon("eye",13)+" "+(viewerName||"Consultation"));
+  }
+  renderPreviewControl();
   renderWatermark();
+}
+
+// ---------------------------------------------------------------------------
+// APERÇU ADMIN — "voir comme Untel"
+// Permet a l'administrateur de visualiser l'app exactement comme la voit une
+// personne donnee (baies accessibles, lecture seule, filigrane a son nom),
+// sans connaitre son mot de passe. La session admin reste active en arriere-
+// plan : ce controle reste visible meme pendant l'apercu, pour revenir en un
+// clic, independamment de "mode" qui lui pilote l'affichage courant.
+let previewingAs = null;
+function isAdminSession(){ return storageGet(sessionStorage, "netmap_admin") === "true"; }
+function allViewerNames(){
+  const names = new Set();
+  DATA.baies.forEach(b => (b.viewers||[]).forEach(v => names.add(v.nom)));
+  return Array.from(names).sort();
+}
+function renderPreviewControl(){
+  const wrap = document.getElementById("previewWrap");
+  if(!wrap) return;
+  if(!isAdminSession()){ wrap.innerHTML = ""; return; }
+  const names = allViewerNames();
+  wrap.innerHTML = `<select id="previewSelect">
+    <option value="">— Vue admin —</option>
+    ${names.map(n=>`<option value="${n}" ${previewingAs===n?"selected":""}>Voir comme ${n}</option>`).join("")}
+  </select>`;
+  document.getElementById("previewSelect").value = previewingAs || "";
+  document.getElementById("previewSelect").onchange = (e)=>{
+    const name = e.target.value;
+    if(!name){ exitPreview(); return; }
+    enterPreview(name);
+  };
+}
+function enterPreview(name){
+  previewingAs = name;
+  mode = "consult";
+  viewerName = name;
+  selectedConnId = null; selectedExtra = null;
+  const accessible = DATA.baies.filter(b => (b.viewers||[]).some(v=>v.nom===name));
+  if(accessible.length && !accessible.find(b=>b.id===currentBaieId)){
+    currentBaieId = accessible[0].id;
+    activeSwitchId = baieSwitches()[0]?.id;
+  }
+  applyMode();
+  renderBaiePicker();
+  render();
+}
+function exitPreview(){
+  previewingAs = null;
+  mode = "admin";
+  viewerName = "";
+  selectedConnId = null; selectedExtra = null;
+  applyMode();
+  renderBaiePicker();
+  render();
 }
 
 // ---------------------------------------------------------------------------
@@ -293,9 +352,10 @@ function renderWatermark(){
 document.getElementById("logoutBtn").innerHTML = icon("logout") + `<span class="btnLabel">Déconnexion</span>`;
 document.getElementById("logoutBtn").onclick = ()=>{
   const baie = currentBaie();
-  if(mode==="admin") storageRemove(sessionStorage, "netmap_admin");
+  if(mode==="admin" || previewingAs) storageRemove(sessionStorage, "netmap_admin");
   else storageRemove(sessionStorage, "netmap_viewer_"+baie.id);
   selectedConnId = null; selectedExtra = null;
+  previewingAs = null;
   mode = null; viewerName = "";
   renderWatermark();
   checkAccess();
@@ -318,7 +378,10 @@ document.addEventListener("input", e=>{
 
 function renderBaiePicker(){
   const sel = document.getElementById("baiePicker");
-  sel.innerHTML = DATA.baies.map(b=>`<option value="${b.id}" ${b.id===currentBaieId?"selected":""}>${b.slug}</option>`).join("");
+  const list = previewingAs
+    ? DATA.baies.filter(b => (b.viewers||[]).some(v=>v.nom===previewingAs))
+    : DATA.baies;
+  sel.innerHTML = list.map(b=>`<option value="${b.id}" ${b.id===currentBaieId?"selected":""}>${b.slug}</option>`).join("");
 }
 document.getElementById("baiePicker").addEventListener("change", e=>{
   const target = DATA.baies.find(b=>b.id===e.target.value);
@@ -380,17 +443,29 @@ function makeAddBar(category, labelText, iconName, arrGetter){
 // ---------------------------------------------------------------------------
 function paintCables(){
   const svg = document.getElementById("cables");
-  if(!svg) return;
+  const markers = document.getElementById("cableMarkers");
+  if(!svg || !markers) return;
   const stage = svg.parentElement;
   if(!stage) return;
 
   while(svg.firstChild) svg.removeChild(svg.firstChild);
+  while(markers.firstChild) markers.removeChild(markers.firstChild);
 
   const stageRect = stage.getBoundingClientRect();
   svg.setAttribute("width", Math.ceil(stageRect.width));
   svg.setAttribute("height", Math.ceil(stage.scrollHeight));
+  markers.setAttribute("width", Math.ceil(stageRect.width));
+  markers.setAttribute("height", Math.ceil(stage.scrollHeight));
 
   const svgNS = "http://www.w3.org/2000/svg";
+
+  // Barres physiques (tiroir, onduleur, NAS, equipement) que les cables
+  // peuvent traverser — utilisees ci-dessous pour poser un repere d'entree
+  // et de sortie a l'endroit exact ou chaque cable passe derriere.
+  const guides = Array.from(stage.querySelectorAll(".rackBar.cableGuide")).map(el=>{
+    const r = el.getBoundingClientRect();
+    return { top: r.top - stageRect.top, bottom: r.bottom - stageRect.top };
+  });
 
   baieConnexions().forEach((c, i)=>{
     const baie = currentBaie();
@@ -444,6 +519,23 @@ function paintCables(){
     path.style.pointerEvents = "stroke";
     path.style.cursor = "pointer";
     path.onclick = ()=>{ selectedConnId = c.id; selectedExtra = null; render(); };
+
+    // Reperes d'entree/sortie : la ou le cable disparait derriere une barre,
+    // puis en ressort — approximation lineaire de x le long de la courbe,
+    // suffisante pour un petit repere ponctuel.
+    const xAtY = (y)=> x1 + (x2 - x1) * ((y - y1) / (y2 - y1));
+    guides.forEach(g=>{
+      if(g.top <= y1 || g.bottom >= y2) return; // barre hors du trajet de ce cable
+      [g.top, g.bottom].forEach(gy=>{
+        const dot = document.createElementNS(svgNS,"circle");
+        dot.setAttribute("cx", xAtY(gy));
+        dot.setAttribute("cy", gy);
+        dot.setAttribute("r", 3.5);
+        dot.setAttribute("fill", color);
+        dot.setAttribute("class", "cableMark" + (cls.includes("dim") ? " dim" : ""));
+        markers.appendChild(dot);
+      });
+    });
   });
 }
 
@@ -585,6 +677,11 @@ function renderRack(){
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("id","cables");
   stage.appendChild(svg);
+  // Calque separe, au-dessus des barres physiques : reperes d'entree/sortie
+  // la ou un cable passe derriere un tiroir, un onduleur, etc.
+  const markers = document.createElementNS(svgNS, "svg");
+  markers.setAttribute("id","cableMarkers");
+  stage.appendChild(markers);
   scheduleCablePaint();
 
   // --- Légende ---
@@ -1067,7 +1164,9 @@ document.getElementById("accessBtn").onclick = ()=>{
 document.getElementById("accessCloseBtn").onclick = ()=> accessOverlay.classList.remove("open");
 function renderAccessContent(){
   const baie = currentBaie();
-  let html = baie.viewers.map(v=>`
+  let html = `<button class="btn primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="regenerateAllPasswords()">${icon("keyround")} Régénérer tous les codes (4 chiffres)</button>
+    <div class="pinHint" style="margin-bottom:16px;">Génère un nouveau code à 4 chiffres pour <strong>chaque personne</strong>, synchronisé sur <strong>toutes ses baies</strong> — pas seulement celle-ci.</div>`;
+  html += baie.viewers.map(v=>`
     <div class="equipCard">
       <label>Nom</label><input value="${v.nom}" oninput="updateViewer('${v.id}','nom',this.value)">
       <label>Mot de passe</label><input value="${v.password}" oninput="updateViewer('${v.id}','password',this.value)">
@@ -1076,6 +1175,26 @@ function renderAccessContent(){
   html += `<button class="btn primary" style="width:100%; justify-content:center;" onclick="addViewer()">${icon("plus")} Ajouter une personne</button>`;
   document.getElementById("accessContent").innerHTML = html;
 }
+window.regenerateAllPasswords = ()=>{
+  const names = allViewerNames();
+  if(!names.length){ alert("Aucune personne enregistrée pour l'instant."); return; }
+  if(!confirm("Générer un nouveau code à 4 chiffres pour "+names.length+" personne(s) ?\n\nLes anciens codes resteront valables sur tout appareil qui n'aura pas réimporté le fichier mis à jour — voir la remarque plus bas.")) return;
+  const used = new Set();
+  const newCodes = {};
+  names.forEach(name=>{
+    let code;
+    do { code = String(Math.floor(1000 + Math.random()*9000)); } while(used.has(code));
+    used.add(code);
+    newCodes[name] = code;
+  });
+  DATA.baies.forEach(b=>{
+    (b.viewers||[]).forEach(v=>{ if(newCodes[v.nom]) v.password = newCodes[v.nom]; });
+  });
+  save();
+  renderAccessContent();
+  const summary = Object.entries(newCodes).map(([n,c])=>n+" : "+c).join("\n");
+  alert("Nouveaux codes :\n\n"+summary+"\n\nÀ communiquer individuellement. Chaque code ne prend effet que lorsque la personne réimporte le fichier exporté — voir la remarque à ce sujet.");
+};
 window.updateViewer = (id, field, value)=>{
   const baie = currentBaie();
   const v = baie.viewers.find(x=>x.id===id);
@@ -1120,10 +1239,50 @@ document.getElementById("qrCloseBtn").onclick = ()=> qrOverlay.classList.remove(
 // ---------------------------------------------------------------------------
 document.getElementById("exportBtn").onclick = ()=>{
   if(mode!=="admin") return;
+  // A chaque export, un nouveau jeu de codes a 4 chiffres est genere — le
+  // fichier exporte devient ainsi le seul detenteur des codes de consultation.
+  const usedCodes = new Set();
+  const genCode = ()=>{
+    let code;
+    do { code = String(Math.floor(1000 + Math.random()*9000)); } while(usedCodes.has(code));
+    usedCodes.add(code);
+    return code;
+  };
+
+  const names = allViewerNames();
+  let summary = "";
+  if(names.length){
+    const newCodes = {};
+    names.forEach(name=>{ newCodes[name] = genCode(); });
+    DATA.baies.forEach(b=>{
+      (b.viewers||[]).forEach(v=>{ if(newCodes[v.nom]) v.password = newCodes[v.nom]; });
+    });
+    save();
+    if(document.getElementById("accessContent")) renderAccessContent();
+    summary = Object.entries(newCodes).map(([n,c])=>n+" : "+c).join("\n");
+  }
+
+  // Code admin : regenere lui aussi, applique uniquement a CET appareil.
+  // Il ne fait jamais partie du fichier exporte (DATA ne le contient pas) —
+  // sinon n'importe quel destinataire du fichier pourrait devenir admin.
+  let adminLine = "";
+  if(!ADMIN_PIN_HASH){
+    const adminCode = genCode();
+    storageSet(localStorage, "netmap_pin", adminCode);
+    adminLine = "\n\nTon nouveau code Administrateur (cet appareil uniquement) : " + adminCode;
+  } else {
+    adminLine = "\n\n(Code Administrateur géré par hash — voir README-SECURITE, non régénéré automatiquement ici.)";
+  }
+
+  if(names.length || !ADMIN_PIN_HASH){
+    alert("Nouveaux codes générés :\n\n"+summary+adminLine+"\n\nLes codes de consultation sont dans le fichier exporté, à communiquer individuellement. Ton code Administrateur n'y figure pas — note-le à part.");
+  }
+
   const blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "dndvdl-map-export-"+new Date().toISOString().slice(0,10)+".json";
+  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+  a.download = "dndvdl-map-export-"+stamp+".json";
   a.click();
 };
 document.getElementById("importBtn").onclick = ()=>{ document.getElementById("fileImport").click(); };
