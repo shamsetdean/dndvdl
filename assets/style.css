@@ -1,13 +1,12 @@
 /* © Anthropotech Lab — tous droits reserves. Voir LICENSE a la racine du depot. */
 /* ===========================================================================
-   DNDVDL-MAP — Liquid Glass
-   Regle absolue : l'interface est monochrome. La couleur est reservee
-   exclusivement a la semantique des cables RJ45 (bleu, bleu fonce, rose, vert).
-   Aucun etat d'interface n'introduit de couleur : les accents sont du blanc
-   a opacite variable. Aucune police externe, aucun appel reseau.
+   DNDVDL-MAP — Papier technique
+   Fond crayeux, encre graphite, rendu "plan technique / carnet de croquis".
+   Regle inchangee : la couleur est reservee exclusivement aux cables RJ45
+   (bleu, bleu fonce, rose, vert — les teintes de l'illustration de marque).
+   Aucune police externe, aucun appel reseau.
    =========================================================================== */
 
-/* --- Polices auto-hebergees ---------------------------------------------- */
 @font-face{font-family:'Sora';font-style:normal;font-weight:300;font-display:swap;
   src:url('fonts/sora-latin-300-normal.woff2') format('woff2');}
 @font-face{font-family:'Sora';font-style:normal;font-weight:400;font-display:swap;
@@ -26,29 +25,34 @@
   src:url('fonts/jetbrains-mono-latin-600-normal.woff2') format('woff2');}
 
 :root{
-  /* Base neutre — aucune teinte. Moins noir, plus lisible. */
-  --void:#14171c;
-  --ink:#ffffff;
-  --ink-mid:rgba(255,255,255,.78);
-  --ink-dim:rgba(255,255,255,.58);
-  --ink-faint:rgba(255,255,255,.40);
+  /* Papier — fond chaud, jamais blanc pur */
+  --paper-0:#F6F3EB;
+  --paper-1:#FBF9F3;
+  --paper-2:#FFFFFF;
+  --paper-3:#EEE9DB;
 
-  /* Surfaces de verre — plus de matiere, moins de vide */
-  --glass:rgba(255,255,255,.065);
-  --glass-2:rgba(255,255,255,.10);
-  --glass-3:rgba(255,255,255,.16);
-  --edge:rgba(255,255,255,.14);
-  --edge-strong:rgba(255,255,255,.30);
-  --specular:rgba(255,255,255,.22);
+  /* Encre — graphite chaud, jamais noir pur */
+  --ink:#2A2723;
+  --ink-mid:rgba(42,39,35,.70);
+  --ink-dim:rgba(42,39,35,.50);
+  --ink-faint:rgba(42,39,35,.30);
 
-  /* Accent = blanc, jamais une couleur */
-  --accent:#ffffff;
-  --accent-glow:rgba(255,255,255,.38);
+  --edge:rgba(42,39,35,.14);
+  --edge-strong:rgba(42,39,35,.28);
+  --edge-soft:rgba(42,39,35,.08);
 
-  --blur:22px;
-  --r-sm:8px;
-  --r-md:14px;
-  --r-lg:20px;
+  /* Accent d'interface = encre, jamais une couleur */
+  --accent:#2A2723;
+  --accent-ring:rgba(42,39,35,.22);
+
+  /* Palette de marque — cables uniquement (echantillonnee sur l'illustration) */
+  --brand-blue:#3B8FB3;
+  --brand-pink:#D9578C;
+  --brand-green:#94A84C;
+
+  --r-sm:6px;
+  --r-md:12px;
+  --r-lg:18px;
 
   --ease-spring: cubic-bezier(.34,1.56,.64,1);
   --ease-out: cubic-bezier(.16,1,.3,1);
@@ -62,46 +66,51 @@ html,body{margin:0; padding:0;}
 
 body{
   min-height:100vh;
-  background:var(--void);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(42,39,35,.035) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(42,39,35,.035) 31px 32px),
+    var(--paper-0);
   color:var(--ink);
   font-family:var(--font-ui);
   font-size:14px;
   font-weight:400;
-  letter-spacing:-.01em;
+  letter-spacing:-.005em;
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
   position:relative;
   overflow-x:hidden;
 }
 
-/* Halos de lumiere ambiante — strictement neutres */
+/* Traits de construction, discrets, façon plan technique */
 body::before{
   content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
   background:
-    radial-gradient(720px 480px at 12% -8%, rgba(255,255,255,.10), transparent 62%),
-    radial-gradient(900px 600px at 108% 4%, rgba(255,255,255,.07), transparent 64%),
-    radial-gradient(700px 700px at 50% 118%, rgba(255,255,255,.055), transparent 62%);
-  animation: driftGlow 22s ease-in-out infinite alternate;
-}
-@keyframes driftGlow{
-  0%{ opacity:.85; }
-  100%{ opacity:1; transform:translateY(-8px); }
+    radial-gradient(900px 500px at 8% -10%, rgba(59,143,179,.05), transparent 60%),
+    radial-gradient(900px 600px at 105% 6%, rgba(217,87,140,.04), transparent 62%),
+    radial-gradient(800px 700px at 50% 120%, rgba(148,168,76,.05), transparent 60%);
 }
 body > *{position:relative; z-index:1;}
 
-svg.ic{flex-shrink:0; stroke-width:1.6;}
+svg.ic{flex-shrink:0; stroke-width:1.7;}
 
-/* --- Visibilite selon le profil ------------------------------------------ */
 .admin-only{display:none;}
 body[data-mode="admin"] .admin-only{display:inline-flex;}
 .admin-block{display:none;}
 body[data-mode="admin"] .admin-block{display:flex;}
 
-/* --- Surface de verre reutilisable --------------------------------------- */
+/* --- Cartouches / cadre technique ---------------------------------------- */
+body::after, #frameTR, #frameBL{
+  content:""; position:fixed; width:22px; height:22px; z-index:5; pointer-events:none;
+  border-color:var(--ink-faint);
+}
+body::after{ bottom:10px; right:10px; border-bottom:2px solid var(--ink-faint); border-right:2px solid var(--ink-faint); content:""; }
+#frameTR{ top:10px; right:10px; border-top:2px solid var(--ink-faint); border-right:2px solid var(--ink-faint); }
+#frameBL{ bottom:10px; left:10px; border-bottom:2px solid var(--ink-faint); border-left:2px solid var(--ink-faint); }
+body::before{ }
+
+/* --- Surfaces papier reutilisables ---------------------------------------- */
 header, #panel, #legend, #titleBlock, .modalBox, #loginCard, .rackBar{
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(150%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+  background:var(--paper-2);
   border:1px solid var(--edge);
 }
 
@@ -110,21 +119,21 @@ header{
   padding:14px 22px;
   display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   border-left:none; border-right:none; border-top:none;
-  box-shadow:inset 0 1px 0 var(--specular);
+  box-shadow:0 1px 0 var(--edge-soft);
 }
 
 .brand{display:flex; align-items:baseline; gap:9px;}
 header h1{
   font-family:var(--font-ui);
-  font-weight:600; font-size:17px;
-  letter-spacing:.14em;
+  font-weight:700; font-size:17px;
+  letter-spacing:.1em;
   margin:0; color:var(--ink);
   text-transform:uppercase; white-space:nowrap;
 }
-header h1 em{font-style:normal; font-weight:300; color:var(--ink-dim);}
+header h1 em{font-style:normal; font-weight:400; color:var(--ink-dim);}
 .tagline{
-  font-size:10px; letter-spacing:.16em; color:var(--ink-dim);
-  text-transform:uppercase; white-space:nowrap; font-weight:400;
+  font-size:10px; letter-spacing:.14em; color:var(--ink-dim);
+  text-transform:uppercase; white-space:nowrap; font-weight:500;
 }
 .spacer{flex:1;}
 .actionsRow{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
@@ -132,10 +141,8 @@ header h1 em{font-style:normal; font-weight:300; color:var(--ink-dim);}
 /* --- Champs -------------------------------------------------------------- */
 select, input{
   font-family:var(--font-ui);
-  background:var(--glass-2);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  border:1px solid var(--edge);
+  background:var(--paper-1);
+  border:1px solid var(--edge-strong);
   color:var(--ink);
   padding:9px 12px;
   border-radius:var(--r-sm);
@@ -143,7 +150,7 @@ select, input{
   outline:none;
   transition:border-color .18s, background .18s;
 }
-select:focus, input:focus{border-color:var(--edge-strong); background:var(--glass-3);}
+select:focus, input:focus{border-color:var(--ink-dim); background:var(--paper-2);}
 select{appearance:none; -webkit-appearance:none; padding-right:30px;
   background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),
                    linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
@@ -158,47 +165,43 @@ select{appearance:none; -webkit-appearance:none; padding-right:30px;
   padding:11px 14px 11px 38px; width:100%; font-size:16px;
   border-radius:999px;
 }
-#search::placeholder{color:var(--ink-dim); font-size:13px;}
+#search::placeholder{color:var(--ink-faint); font-size:13px;}
 
 /* --- Boutons ------------------------------------------------------------- */
 .btn{
   display:inline-flex; align-items:center; gap:8px;
-  background:var(--glass-2);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  border:1px solid var(--edge);
+  background:var(--paper-1);
+  border:1px solid var(--edge-strong);
   color:var(--ink-mid);
   padding:9px 15px;
   border-radius:999px;
   font-family:var(--font-ui);
-  font-size:11px; font-weight:500;
+  font-size:11px; font-weight:600;
   cursor:pointer; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
-  box-shadow:inset 0 1px 0 var(--specular);
   transition:color .18s var(--ease-out), border-color .18s var(--ease-out),
-             background .18s var(--ease-out), transform .22s var(--ease-spring);
+             background .18s var(--ease-out), transform .22s var(--ease-spring),
+             box-shadow .18s var(--ease-out);
 }
-.btn:hover{color:var(--ink); border-color:var(--edge-strong); background:var(--glass-3); transform:translateY(-1px);}
+.btn:hover{color:var(--ink); border-color:var(--ink-dim); background:var(--paper-2); transform:translateY(-1px); box-shadow:0 3px 10px var(--edge-soft);}
 .btn:active{transform:scale(.96) translateY(0); transition-duration:.08s;}
 .btn.primary{
-  background:rgba(255,255,255,.92); color:#0a0b0d; border-color:transparent;
-  font-weight:600;
-  box-shadow:0 2px 18px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.6);
+  background:var(--ink); color:var(--paper-1); border-color:var(--ink);
+  font-weight:700;
+  box-shadow:0 2px 10px rgba(42,39,35,.18);
 }
-.btn.primary:hover{background:#fff; color:#0a0b0d;}
-/* Action destructive : distinguee par le trait, jamais par la couleur */
+.btn.primary:hover{background:#3d3830; color:var(--paper-1); border-color:#3d3830;}
 .btn.danger{
   border-color:var(--edge-strong); border-style:dashed; color:var(--ink-mid);
   background:transparent; box-shadow:none;
 }
-.btn.danger:hover{color:var(--ink); border-color:var(--ink-dim); background:var(--glass);}
+.btn.danger:hover{color:var(--ink); border-color:var(--brand-pink); background:var(--paper-1);}
 
 .badge{
   display:inline-flex; align-items:center; gap:7px;
-  font-size:10px; font-weight:500; letter-spacing:.09em; text-transform:uppercase;
+  font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
   color:var(--ink-mid);
-  background:var(--glass-2); border:1px solid var(--edge);
+  background:var(--paper-1); border:1px solid var(--edge-strong);
   padding:7px 13px; border-radius:999px; white-space:nowrap;
-  box-shadow:inset 0 1px 0 var(--specular);
 }
 
 /* --- Mise en page -------------------------------------------------------- */
@@ -210,32 +213,29 @@ main{display:flex; flex-direction:column;}
 /* --- Onglets ------------------------------------------------------------- */
 .tabs{display:flex; gap:7px; margin-bottom:18px; align-items:center; flex-wrap:wrap;}
 .tab{
-  background:var(--glass-2);
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-  border:1px solid var(--edge); color:var(--ink-dim);
+  background:var(--paper-1);
+  border:1px solid var(--edge-strong); color:var(--ink-dim);
   padding:8px 16px; border-radius:999px;
-  font-family:var(--font-ui); font-size:11px; font-weight:500;
+  font-family:var(--font-ui); font-size:11px; font-weight:600;
   cursor:pointer; letter-spacing:.05em;
   transition:color .18s, border-color .18s, background .18s;
 }
 .tab:hover{color:var(--ink-mid);}
 .tab.active{
-  color:#0a0b0d; background:rgba(255,255,255,.9); border-color:transparent; font-weight:600;
-  box-shadow:0 2px 14px rgba(255,255,255,.12);
+  color:var(--paper-1); background:var(--ink); border-color:var(--ink); font-weight:700;
 }
 
 /* --- Intitules de section ------------------------------------------------ */
 .rowLabel{
   font-family:var(--font-ui);
-  font-size:10px; font-weight:500;
-  text-transform:uppercase; letter-spacing:.18em; color:var(--ink-dim);
+  font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.16em; color:var(--ink-dim);
   margin:26px 0 12px;
   display:flex; align-items:center; gap:9px;
 }
 .rowLabel:first-child{margin-top:0;}
 
 /* --- Bandeaux et switches ------------------------------------------------ */
-/* Empilement vertical : chaque element occupe son propre U, comme dans la baie */
 .bandeauBlock{
   display:block; width:fit-content;
   margin:0 auto 14px;
@@ -243,31 +243,28 @@ main{display:flex; flex-direction:column;}
 .bandeauBlock:last-of-type{margin-bottom:0;}
 .blockLabel{
   display:flex; align-items:center; gap:7px;
-  font-family:var(--font-data); font-size:10px; font-weight:400;
-  color:var(--ink-dim); margin-bottom:9px; letter-spacing:.02em;
+  font-family:var(--font-data); font-size:10px; font-weight:500;
+  color:var(--ink-dim); margin-bottom:9px; letter-spacing:.01em;
 }
-/* Chassis de verre autour de la rangee de ports */
 .portRowFrame{
   display:inline-flex; align-items:center; gap:8px;
-  padding:9px 11px; border-radius:var(--r-md);
-  background:var(--glass);
-  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  border:1px solid var(--edge);
-  box-shadow:inset 0 1px 0 var(--specular);
+  padding:10px 12px; border-radius:var(--r-md);
+  background:var(--paper-1);
+  border:1px solid var(--edge-strong);
+  box-shadow:inset 0 1px 3px var(--edge-soft);
 }
-/* Oreilles de fixation 1U, percees de deux trous, comme sur le panneau reel */
 .screw{
   align-self:stretch; width:14px; flex-shrink:0;
   border-radius:5px;
-  background:var(--glass-2);
+  background:var(--paper-3);
   border:1px solid var(--edge);
   position:relative;
 }
 .screw::before, .screw::after{
   content:""; position:absolute; left:50%; margin-left:-2.5px;
   width:5px; height:5px; border-radius:50%;
-  background:rgba(0,0,0,.55);
-  box-shadow:inset 0 1px 1px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.10);
+  background:var(--ink-faint);
+  box-shadow:inset 0 1px 1px rgba(0,0,0,.15);
 }
 .screw::before{top:9px;}
 .screw::after{bottom:9px;}
@@ -275,73 +272,65 @@ main{display:flex; flex-direction:column;}
 .portRows{display:flex; flex-direction:column; gap:9px;}
 .portRow{display:flex; gap:3px; align-items:flex-start;}
 
-/* Un port = une alveole rectangulaire + son numero grave dessous */
 .portSlot{
   display:flex; flex-direction:column; align-items:center; gap:3px;
   cursor:pointer; flex-shrink:0;
-  transition:transform .12s;
+  transition:transform .18s var(--ease-spring);
 }
 .jack{
   width:20px; height:25px; border-radius:3px;
-  background:var(--glass-2);
-  border:1px solid var(--edge);
-  box-shadow:inset 0 2px 5px rgba(0,0,0,.55);
+  background:var(--paper-2);
+  border:1px solid var(--edge-strong);
+  box-shadow:inset 0 2px 4px var(--edge-soft);
   position:relative;
   transition:box-shadow .18s, border-color .18s, background .18s;
 }
-/* Encoche du clip RJ45, en haut de l'alveole */
 .jack::after{
   content:""; position:absolute; top:-1px; left:50%; margin-left:-3px;
   width:6px; height:5px; border-radius:0 0 2px 2px;
-  background:var(--void); opacity:.5;
+  background:var(--paper-0); opacity:.7;
 }
 .portNum{
-  font-family:var(--font-data); font-size:7px; font-weight:500;
+  font-family:var(--font-data); font-size:7px; font-weight:600;
   color:var(--ink-faint); line-height:1;
   letter-spacing:-.03em;
   transition:color .18s;
 }
 
-/* Port occupe : la couleur du cable remplit l'alveole */
 .portSlot.used .jack{
   border-color:transparent;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.32), 0 0 9px -3px currentColor;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.18), 0 1px 4px -1px currentColor;
 }
-.portSlot.used .portNum{color:var(--ink-mid);}
+.portSlot.used .portNum{color:var(--paper-1); mix-blend-mode:difference;}
 
-.portSlot.selected{transform:translateY(-2px); transition:transform .28s var(--ease-spring);}
+.portSlot.selected{transform:translateY(-2px);}
 .portSlot.selected .jack{
   border-color:var(--accent);
-  animation:portPulse2 1.8s ease-in-out infinite;
+  animation:portPulse 1.8s ease-in-out infinite;
 }
-.portSlot.selected .portNum{color:var(--ink); font-weight:700;}
-@keyframes portPulse2{
-  0%, 100%{ box-shadow:0 0 0 2px var(--void), 0 0 0 3px var(--accent), 0 0 20px var(--accent-glow); }
-  50%{ box-shadow:0 0 0 2px var(--void), 0 0 0 3px var(--accent), 0 0 32px var(--accent-glow); }
+.portSlot.selected .portNum{color:var(--ink); font-weight:800;}
+@keyframes portPulse{
+  0%, 100%{ box-shadow:0 0 0 2px var(--paper-0), 0 0 0 3px var(--accent), 0 2px 6px var(--accent-ring); }
+  50%{ box-shadow:0 0 0 2px var(--paper-0), 0 0 0 3px var(--accent), 0 2px 10px var(--accent-ring); }
 }
 
-.portSlot.dimmed{opacity:.24;}
-
-.portSlot{transition:transform .18s var(--ease-spring);}
+.portSlot.dimmed{opacity:.30;}
 .portSlot.free:hover{transform:translateY(-1px);}
-.portSlot.free:hover .jack{border-color:var(--edge-strong); background:var(--glass-3);}
+.portSlot.free:hover .jack{border-color:var(--ink-dim); background:var(--paper-1);}
 .portSlot.free:hover .portNum{color:var(--ink-mid);}
-body[data-mode="admin"] .portSlot.free:hover .jack{background:var(--glass-3);}
+body[data-mode="admin"] .portSlot.free:hover .jack{background:var(--paper-3);}
 
 /* --- Cables -------------------------------------------------------------- */
 svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visible; z-index:1;}
-.cable{fill:none; stroke-width:2; opacity:.42; transition:opacity .2s, stroke-width .2s;}
+.cable{fill:none; stroke-width:2.25; opacity:.55; transition:opacity .2s, stroke-width .2s;}
 .cable.active{
-  opacity:1; stroke-width:3;
-  filter:drop-shadow(0 0 7px currentColor);
+  opacity:1; stroke-width:3.25;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.18));
   stroke-dasharray:7 6; animation:flow 1s linear infinite;
 }
-.cable.dim{opacity:.05;}
+.cable.dim{opacity:.08;}
 @keyframes flow{to{stroke-dashoffset:-26;}}
 
-/* Trace initial du cable : longueur reelle du trait -> visible.
-   Place APRES .active pour l'emporter pendant le tirage, meme sur un
-   cable selectionne (l'animation "fourmis" ne reprend qu'une fois finie). */
 @keyframes cableDraw{
   from{ stroke-dasharray:var(--len); stroke-dashoffset:var(--len); }
   to{ stroke-dasharray:var(--len); stroke-dashoffset:0; }
@@ -355,44 +344,40 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
   display:flex; align-items:center; gap:11px;
   padding:13px 16px; border-radius:var(--r-md);
   margin-bottom:7px; cursor:pointer;
-  font-size:13px; font-weight:400; color:var(--ink-mid);
-  box-shadow:inset 0 1px 0 var(--specular);
-  transition:color .18s, border-color .18s, background .18s, transform .12s;
+  font-size:13px; font-weight:500; color:var(--ink-mid);
+  transition:color .18s, border-color .18s, background .18s, transform .12s, box-shadow .18s;
 }
 .rackBar svg{color:var(--ink-dim); transition:color .18s;}
-.rackBar:hover{color:var(--ink); border-color:var(--edge-strong); background:var(--glass-2);}
+.rackBar:hover{color:var(--ink); border-color:var(--ink-dim); background:var(--paper-1); box-shadow:0 2px 8px var(--edge-soft);}
 .rackBar:hover svg{color:var(--ink-mid);}
 .rackBar.selected{
-  color:var(--ink); border-color:var(--edge-strong); background:var(--glass-3);
-  box-shadow:inset 0 1px 0 var(--specular), 0 6px 26px rgba(0,0,0,.4);
+  color:var(--ink); border-color:var(--ink); background:var(--paper-1);
+  box-shadow:0 3px 10px var(--edge-soft);
 }
 .rackBar.selected svg{color:var(--ink);}
 .rackBar.dashed{
-  background:transparent; border-style:dashed; border-color:var(--edge);
-  color:var(--ink-dim); justify-content:center;
-  backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none;
-  font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  background:transparent; border-style:dashed; border-color:var(--edge-strong);
+  color:var(--ink-dim); justify-content:center; box-shadow:none;
+  font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:600;
 }
-.rackBar.dashed:hover{color:var(--ink-mid); border-color:var(--edge-strong); background:var(--glass);}
+.rackBar.dashed:hover{color:var(--ink-mid); border-color:var(--ink-dim); background:var(--paper-1);}
 
-/* Passe-cable : guide physique. Les cables passent derriere, comme dans la
-   vraie baie ou le passe-cable masque le brin sur sa hauteur. */
 .rackBar.cableGuide{
   position:relative; z-index:2;
-  background:rgba(255,255,255,.085);
+  background:var(--paper-3);
+  border-color:var(--edge-strong);
 }
 
 /* --- Legende ------------------------------------------------------------- */
 #legend{
   margin-top:34px; padding:18px 20px; max-width:600px;
   border-radius:var(--r-lg);
-  box-shadow:inset 0 1px 0 var(--specular);
 }
 #legend .rowLabel{margin:0 0 14px;}
 .legendGrid{display:flex; flex-direction:column; gap:11px;}
 .legendItem{
   display:flex; align-items:center; gap:11px;
-  font-size:12px; color:var(--ink-mid); font-weight:400;
+  font-size:12px; color:var(--ink-mid); font-weight:500;
   transition:opacity .2s;
 }
 .legendSwatch{
@@ -403,7 +388,6 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 #titleBlock{
   margin-top:16px; max-width:600px; border-radius:var(--r-lg); overflow:hidden;
   font-size:11px; color:var(--ink-dim);
-  box-shadow:inset 0 1px 0 var(--specular);
 }
 #titleBlock .row{display:flex; border-bottom:1px solid var(--edge);}
 #titleBlock .row:last-child{border-bottom:none;}
@@ -411,7 +395,7 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 #titleBlock .cell:last-child{border-right:none;}
 #titleBlock .k{
   display:block; text-transform:uppercase; letter-spacing:.14em;
-  font-size:8px; color:var(--ink-faint); margin-bottom:5px; font-weight:500;
+  font-size:8px; color:var(--ink-faint); margin-bottom:5px; font-weight:700;
 }
 #titleBlock .v{color:var(--ink-mid); font-size:11px; font-family:var(--font-data);
   overflow-wrap:anywhere;}
@@ -422,23 +406,24 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
   width:100%; padding:26px 22px 44px;
   border:none; border-top:1px solid var(--edge);
 }
-@keyframes panelRefresh{ from{opacity:0; transform:translateX(6px);} to{opacity:1; transform:translateX(0);} }
-#panel.refresh{ animation:panelRefresh .26s var(--ease-out) both; }
 @media(min-width:900px){
   #panel{
     width:352px; border-top:none; border-left:1px solid var(--edge);
     max-height:100vh; overflow-y:auto;
   }
 }
+@keyframes panelRefresh{ from{opacity:0; transform:translateX(6px);} to{opacity:1; transform:translateX(0);} }
+#panel.refresh{ animation:panelRefresh .26s var(--ease-out) both; }
+
 #panel h2{
   font-family:var(--font-ui);
-  font-size:19px; font-weight:600; letter-spacing:-.02em;
+  font-size:19px; font-weight:700; letter-spacing:-.01em;
   margin:0 0 5px; color:var(--ink);
   display:flex; align-items:center; gap:11px; line-height:1.25;
 }
 #panel .sub{
   font-size:11px; color:var(--ink-dim); margin-bottom:22px;
-  letter-spacing:.07em; text-transform:uppercase; font-weight:400;
+  letter-spacing:.07em; text-transform:uppercase; font-weight:600;
 }
 
 .field{
@@ -447,13 +432,12 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 }
 .field .k{
   font-size:9px; text-transform:uppercase; letter-spacing:.13em;
-  color:var(--ink-faint); flex-shrink:0; font-weight:500;
+  color:var(--ink-faint); flex-shrink:0; font-weight:700;
 }
 .field .v{
   font-family:var(--font-data); font-size:12px; text-align:right;
   overflow-wrap:anywhere; color:var(--ink);
 }
-/* Champ manquant : signale par le trait et l'italique, pas par une couleur */
 .field .v.missing{
   font-family:var(--font-ui); font-style:italic; font-size:10px;
   text-transform:lowercase; letter-spacing:.04em;
@@ -463,7 +447,7 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 }
 .field input.inlineEdit, .field select.inlineEdit{
   width:160px; text-align:right; background:transparent;
-  border:none; border-bottom:1px solid var(--edge);
+  border:none; border-bottom:1px solid var(--edge-strong);
   border-radius:0; color:var(--ink);
   font-family:var(--font-data); font-size:16px; padding:3px 0;
 }
@@ -473,7 +457,7 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 
 .empty{
   color:var(--ink-dim); font-size:12px; padding:34px 18px; text-align:center;
-  border:1px dashed var(--edge); border-radius:var(--r-md); line-height:1.6;
+  border:1px dashed var(--edge-strong); border-radius:var(--r-md); line-height:1.6;
 }
 .panelActions{display:flex; gap:9px; margin-top:20px;}
 .panelActions .btn{flex:1; justify-content:center;}
@@ -486,7 +470,7 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 }
 .listItem svg{margin-top:2px; color:var(--ink-faint); flex-shrink:0; transition:color .18s;}
 .listItem:hover svg{color:var(--ink-mid);}
-.listItem strong{font-weight:500; letter-spacing:-.01em;}
+.listItem strong{font-weight:600; letter-spacing:-.005em;}
 .listItem:hover strong{color:var(--ink);}
 .listItem span.meta{
   font-family:var(--font-data); font-size:10px; color:var(--ink-dim);
@@ -496,35 +480,32 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 /* --- Modales ------------------------------------------------------------- */
 #overlay, #pinOverlay, #equipOverlay, #accessOverlay, #qrOverlay{
   position:fixed; inset:0; z-index:60;
-  background:rgba(4,5,7,.62);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  background:rgba(42,39,35,.32);
   display:none; align-items:center; justify-content:center; padding:18px;
 }
-#overlay.open, #pinOverlay.open, #equipOverlay.open, #accessOverlay.open, #qrOverlay.open{
-  display:flex; animation:overlayIn .22s var(--ease-out) both;
-}
+#overlay.open, #pinOverlay.open, #equipOverlay.open, #accessOverlay.open, #qrOverlay.open{display:flex; animation:overlayIn .22s var(--ease-out) both;}
 #overlay.open .modalBox, #pinOverlay.open .modalBox, #equipOverlay.open .modalBox,
 #accessOverlay.open .modalBox, #qrOverlay.open .modalBox{
   animation:modalIn .32s var(--ease-spring) both;
 }
 @keyframes overlayIn{ from{opacity:0;} to{opacity:1;} }
 @keyframes modalIn{ from{opacity:0; transform:scale(.94) translateY(10px);} to{opacity:1; transform:scale(1) translateY(0);} }
+
 .modalBox{
-  background:rgba(24,26,31,.72);
-  backdrop-filter:blur(32px) saturate(170%); -webkit-backdrop-filter:blur(32px) saturate(170%);
+  background:var(--paper-2);
   border:1px solid var(--edge-strong);
   border-radius:var(--r-lg);
   padding:26px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto;
-  box-shadow:inset 0 1px 0 var(--specular), 0 28px 80px rgba(0,0,0,.62);
+  box-shadow:0 20px 50px rgba(42,39,35,.16);
 }
 .modalBox h3{
   margin:0 0 20px; font-family:var(--font-ui);
-  font-size:15px; font-weight:600; text-transform:uppercase; letter-spacing:.11em;
+  font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;
   color:var(--ink); display:flex; align-items:center; gap:11px;
 }
 .modalBox label{
   display:block; font-size:9px; text-transform:uppercase; letter-spacing:.13em;
-  color:var(--ink-dim); margin:15px 0 6px; font-weight:500;
+  color:var(--ink-dim); margin:15px 0 6px; font-weight:700;
 }
 .modalBox input, .modalBox select{width:100%; font-size:16px;}
 .row2{display:flex; gap:10px;}
@@ -532,11 +513,10 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 .modalActions{display:flex; gap:10px; margin-top:24px;}
 .modalActions .btn{flex:1; justify-content:center;}
 
-/* Nuancier : les 4 couleurs de cable, seuls elements colores */
 .swatches{display:flex; gap:9px; margin-top:7px; flex-wrap:wrap;}
 .swatch{
   width:34px; height:14px; border-radius:999px; cursor:pointer;
-  border:1px solid transparent; outline:2px solid transparent; outline-offset:3px;
+  border:1px solid rgba(0,0,0,.12); outline:2px solid transparent; outline-offset:3px;
   transition:outline-color .18s, transform .12s;
 }
 .swatch:hover{transform:scale(1.08);}
@@ -546,23 +526,22 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 .pinHint{font-size:10px; color:var(--ink-dim); margin-top:10px; line-height:1.65;}
 
 .equipCard{
-  border:1px solid var(--edge); background:var(--glass);
+  border:1px solid var(--edge-strong); background:var(--paper-1);
   padding:16px; margin-bottom:14px; border-radius:var(--r-md);
-  box-shadow:inset 0 1px 0 var(--specular);
 }
 .equipCard .eqTitle{
   display:flex; align-items:center; gap:8px;
   font-size:9px; color:var(--ink-dim); text-transform:uppercase;
-  letter-spacing:.14em; margin-bottom:10px; font-weight:500;
+  letter-spacing:.14em; margin-bottom:10px; font-weight:700;
 }
 
 /* --- QR ------------------------------------------------------------------ */
 #qrContainer{display:flex; justify-content:center; margin:6px 0 16px;}
-#qrContainer svg{border-radius:var(--r-md); box-shadow:0 10px 40px rgba(0,0,0,.45);}
+#qrContainer svg{border-radius:var(--r-md); box-shadow:0 10px 30px rgba(42,39,35,.14);}
 #qrUrl{
   font-family:var(--font-data); font-size:10px; color:var(--ink-dim);
   overflow-wrap:anywhere; text-align:center; padding:11px;
-  border:1px dashed var(--edge); border-radius:var(--r-sm); line-height:1.6;
+  border:1px dashed var(--edge-strong); border-radius:var(--r-sm); line-height:1.6;
 }
 
 /* --- Ecran d'acces ------------------------------------------------------- */
@@ -570,25 +549,24 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 #loginCard{
   width:100%; max-width:392px; border-radius:24px; padding:36px 32px;
   text-align:center;
-  background:rgba(30,33,39,.66);
-  backdrop-filter:blur(34px) saturate(170%); -webkit-backdrop-filter:blur(34px) saturate(170%);
+  background:var(--paper-2);
   border:1px solid var(--edge-strong);
-  box-shadow:inset 0 1px 0 var(--specular), 0 30px 90px rgba(0,0,0,.66);
+  box-shadow:0 24px 60px rgba(42,39,35,.14);
   animation:modalIn .4s var(--ease-spring) both;
 }
 #loginCard h1{
-  font-family:var(--font-ui); font-size:21px; font-weight:600;
-  text-transform:uppercase; letter-spacing:.15em; margin:0 0 8px; color:var(--ink);
+  font-family:var(--font-ui); font-size:21px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.13em; margin:0 0 8px; color:var(--ink);
 }
-#loginCard h1 span{color:var(--ink-dim); font-weight:300;}
-#loginCard .loginLieu{
+#loginCard h1 span{color:var(--ink-dim); font-weight:400;}
+.loginLieu{
   font-size:10px; color:var(--ink-dim); margin-bottom:28px;
   display:flex; align-items:center; justify-content:center; gap:7px;
   text-transform:uppercase; letter-spacing:.14em;
 }
 #loginCard label{
   display:block; text-align:left; font-size:9px; text-transform:uppercase;
-  letter-spacing:.13em; color:var(--ink-dim); margin:16px 0 6px; font-weight:500;
+  letter-spacing:.13em; color:var(--ink-dim); margin:16px 0 6px; font-weight:700;
 }
 #loginCard input, #loginCard select{width:100%; font-size:16px; padding:12px 14px;}
 #loginDivider{
@@ -600,38 +578,11 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 #loginNote{font-size:10px; color:var(--ink-faint); margin-top:20px; line-height:1.7;}
 .emptyIntro{
   font-size:12px; color:var(--ink-mid); line-height:1.7; text-align:left;
-  border:1px dashed var(--edge); border-radius:var(--r-md); padding:16px;
+  border:1px dashed var(--edge-strong); border-radius:var(--r-md); padding:16px;
+  background:var(--paper-1);
 }
 
-/* --- Mobile -------------------------------------------------------------- */
-@media(max-width:600px){
-  .btnLabel{display:none;}
-  .btn{padding:11px;}
-  header{padding:12px 15px; gap:9px;}
-  header h1{font-size:15px; letter-spacing:.11em;}
-  .tagline{display:none;}
-  #rackWrap{padding:22px 15px 14px;}
-  #panel{padding:22px 15px 40px;}
-  #legend, #titleBlock{max-width:100%;}
-  #titleBlock .row{flex-direction:column;}
-  #titleBlock .cell{border-right:none; border-bottom:1px solid var(--edge);}
-  #titleBlock .cell:last-child{border-bottom:none;}
-  .field input.inlineEdit, .field select.inlineEdit{width:135px;}
-  .jack{width:26px; height:30px;} /* cibles tactiles plus larges */
-  .portNum{font-size:8px;}
-}
-
-/* --- Accessibilite ------------------------------------------------------- */
-@media(prefers-reduced-motion:reduce){
-  *{transition:none !important;}
-  .cable.active{animation:none; stroke-dasharray:none;}
-}
-::-webkit-scrollbar{width:9px; height:9px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--edge); border-radius:999px;}
-::-webkit-scrollbar-thumb:hover{background:var(--edge-strong);}
-::selection{background:rgba(255,255,255,.2); color:var(--ink);}
-
+/* --- Filigrane de tracabilite --------------------------------------------- */
 #watermarkLayer{
   position:fixed; inset:0; z-index:999; pointer-events:none;
   display:flex; flex-wrap:wrap; align-content:flex-start;
@@ -643,8 +594,37 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
 #watermarkLayer span{
   font-family:var(--font-data);
   font-size:11px;
-  font-weight:500;
-  color:rgba(255,255,255,.055);
+  font-weight:600;
+  color:rgba(42,39,35,.055);
   white-space:nowrap;
   user-select:none;
 }
+
+/* --- Mobile -------------------------------------------------------------- */
+@media(max-width:600px){
+  .btnLabel{display:none;}
+  .btn{padding:11px;}
+  header{padding:12px 15px; gap:9px;}
+  header h1{font-size:15px; letter-spacing:.09em;}
+  .tagline{display:none;}
+  #rackWrap{padding:22px 15px 14px;}
+  #panel{padding:22px 15px 40px;}
+  #legend, #titleBlock{max-width:100%;}
+  #titleBlock .row{flex-direction:column;}
+  #titleBlock .cell{border-right:none; border-bottom:1px solid var(--edge);}
+  #titleBlock .cell:last-child{border-bottom:none;}
+  .field input.inlineEdit, .field select.inlineEdit{width:135px;}
+  .jack{width:26px; height:30px;}
+  .portNum{font-size:8px;}
+}
+
+/* --- Accessibilite --------------------------------------------------------- */
+@media(prefers-reduced-motion:reduce){
+  *{transition:none !important;}
+  .cable.active{animation:none; stroke-dasharray:none;}
+}
+::-webkit-scrollbar{width:9px; height:9px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--edge-strong); border-radius:999px;}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);}
+::selection{background:rgba(42,39,35,.14); color:var(--ink);}

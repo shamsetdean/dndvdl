@@ -38,6 +38,15 @@ function icon(name, size){
   size = size || 15;
   return `<svg class="ic" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||""}</svg>`;
 }
+// Regle metier : type d'equipement -> couleur de cable normee (convention en vigueur).
+// "autre" n'a pas de couleur imposee, l'utilisateur choisit.
+const TYPE_CABLE_COLOR = {
+  "PC":"vert", "ordinateur portable":"vert", "imprimante":"vert",
+  "NAS":"vert", "serveur":"vert", "routeur":"vert", "borne Wi-Fi":"vert",
+  "téléphone IP":"bleu foncé",
+  "caméra IP":"rose",
+  "autre": null,
+};
 const TYPE_ICON = {
   "PC":"monitor", "ordinateur portable":"monitor", "imprimante":"printer", "téléphone IP":"phone",
   "borne Wi-Fi":"wifi", "caméra IP":"camera", "NAS":"harddrive", "serveur":"server", "routeur":"router", "autre":"box"
@@ -65,7 +74,7 @@ function storageRemove(store, key){
 }
 
 const CABLE_COLORS = {
-  bleu:"#4a8fe7", "bleu foncé":"#1e3a6e", rose:"#f472b6", vert:"#3fb950"
+  bleu:"#3B8FB3", "bleu foncé":"#1B4E68", rose:"#D9578C", vert:"#94A84C"
 };
 // Convention de couleurs en vigueur (communiquée par l'administrateur)
 const COLOR_MEANING = {
@@ -403,7 +412,7 @@ function paintCables(){
     const dy = Math.max(38, Math.abs(y2 - y1) * 0.38);
     path.setAttribute("d", "M "+x1+" "+y1+" C "+x1+" "+(y1+dy)+", "+x2+" "+(y2-dy)+", "+x2+" "+y2);
 
-    const color = CABLE_COLORS[c.couleur] || "rgba(255,255,255,0.35)";
+    const color = CABLE_COLORS[c.couleur] || "rgba(42,39,35,0.30)";
     path.setAttribute("stroke", color);
     path.style.color = color;
 
@@ -460,7 +469,7 @@ function makePortSlot({num, ref, conn, isSel, dimmed, onClick}){
   const jack = document.createElement("div");
   jack.className = "jack";
   jack.dataset.ref = ref;
-  if(conn) jack.style.background = CABLE_COLORS[conn.couleur] || "rgba(255,255,255,0.35)";
+  if(conn) jack.style.background = CABLE_COLORS[conn.couleur] || "rgba(42,39,35,0.30)";
 
   const label = document.createElement("span");
   label.className = "portNum";
@@ -837,7 +846,7 @@ window.openModal = function(editingConn, prefill){
   swWrap.innerHTML = "";
   modalEditingId = editingConn ? editingConn.id : null;
   document.getElementById("modalTitle").textContent = editingConn ? "Modifier la connexion" : "Nouvelle connexion";
-  const chosen = editingConn ? editingConn.couleur : (prefill?.couleur || "bleu");
+  const chosen = editingConn ? editingConn.couleur : (prefill?.couleur || TYPE_CABLE_COLOR["PC"] || "bleu foncé");
   Object.entries(CABLE_COLORS).forEach(([name,hex])=>{
     const d = document.createElement("div");
     d.className = "swatch" + (name===chosen?" selected":"");
@@ -862,6 +871,15 @@ window.openModal = function(editingConn, prefill){
 };
 document.getElementById("addBtn").onclick = ()=> openModal(null, null);
 document.getElementById("cancelBtn").onclick = ()=> overlay.classList.remove("open");
+// Regle metier : la couleur suit automatiquement le type d'equipement choisi.
+// Reste modifiable manuellement ensuite (l'automatisme propose, il n'impose pas).
+document.getElementById("f_type").addEventListener("change", (e)=>{
+  const auto = TYPE_CABLE_COLOR[e.target.value];
+  if(!auto) return;
+  document.querySelectorAll("#f_couleur .swatch").forEach(s=>{
+    s.classList.toggle("selected", s.dataset.name===auto);
+  });
+});
 document.getElementById("saveBtn").onclick = ()=>{
   const nom = document.getElementById("f_nom").value.trim();
   if(!nom){ alert("Le nom du périphérique est requis."); return; }
@@ -880,6 +898,25 @@ document.getElementById("saveBtn").onclick = ()=>{
     couleur: couleurEl ? couleurEl.dataset.name : "gris",
     comment: document.getElementById("f_comment").value.trim(),
   };
+  // Regle metier : un emplacement (port de bandeau, port de switch) ne peut
+  // etre occupe que par un seul equipement a la fois. On bloque plutot que
+  // de laisser deux connexions se superposer silencieusement sur le meme port.
+  if(payload.bandeauId && payload.portB){
+    const conflictB = DATA.connexions.find(c=>
+      c.id!==modalEditingId && c.bandeauId===payload.bandeauId && c.portB===payload.portB);
+    if(conflictB){
+      alert(`Le port ${payload.portB} de ce bandeau est déjà occupé par « ${conflictB.nom} ».\nUn emplacement ne peut être attribué qu'à un seul équipement — libérez-le d'abord.`);
+      return;
+    }
+  }
+  if(payload.switchId && payload.portS){
+    const conflictS = DATA.connexions.find(c=>
+      c.id!==modalEditingId && c.switchId===payload.switchId && c.portS===payload.portS);
+    if(conflictS){
+      alert(`Le port ${payload.portS} de ce switch est déjà occupé par « ${conflictS.nom} ».\nUn emplacement ne peut être attribué qu'à un seul équipement — libérez-le d'abord.`);
+      return;
+    }
+  }
   if(modalEditingId){
     const idx = DATA.connexions.findIndex(c=>c.id===modalEditingId);
     if(idx>-1) DATA.connexions[idx] = {...DATA.connexions[idx], ...payload};
