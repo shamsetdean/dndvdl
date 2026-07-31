@@ -109,7 +109,7 @@ body::after{ bottom:10px; right:10px; border-bottom:2px solid var(--ink-faint); 
 body::before{ }
 
 /* --- Surfaces papier reutilisables ---------------------------------------- */
-header, #panel, #legend, #titleBlock, .modalBox, #loginCard, .rackBar{
+header, #panel, #legend, #titleBlock, .modalBox, #loginCard, #authCard, .rackBar{
   background:var(--paper-2);
   border:1px solid var(--edge);
 }
@@ -195,6 +195,7 @@ select{appearance:none; -webkit-appearance:none; padding-right:30px;
   background:transparent; box-shadow:none;
 }
 .btn.danger:hover{color:var(--ink); border-color:var(--brand-pink); background:var(--paper-1);}
+.btn:disabled{opacity:.45; cursor:default; pointer-events:none;}
 
 .badge{
   display:inline-flex; align-items:center; gap:7px;
@@ -544,7 +545,7 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
   border:1px dashed var(--edge-strong); border-radius:var(--r-sm); line-height:1.6;
 }
 
-/* --- Ecran d'acces ------------------------------------------------------- */
+/* --- Ecran d'acces (ancien systeme, conserve pour l'instant) -------------- */
 #loginScreen{min-height:100vh; display:none; align-items:center; justify-content:center; padding:26px;}
 #loginCard{
   width:100%; max-width:392px; border-radius:24px; padding:36px 32px;
@@ -581,6 +582,65 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
   border:1px dashed var(--edge-strong); border-radius:var(--r-md); padding:16px;
   background:var(--paper-1);
 }
+
+/* ===========================================================================
+   Ecran d'authentification (Supabase Auth) — remplace loginScreen.
+   Meme carte / memes champs que #loginCard pour rester coherent visuellement.
+   =========================================================================== */
+#authScreen{
+  min-height:100vh; display:none; align-items:center; justify-content:center; padding:26px;
+}
+#authCard{
+  width:100%; max-width:392px; border-radius:24px; padding:36px 32px;
+  text-align:center;
+  background:var(--paper-2);
+  border:1px solid var(--edge-strong);
+  box-shadow:0 24px 60px rgba(42,39,35,.14);
+  animation:modalIn .4s var(--ease-spring) both;
+}
+#authCard h1{
+  font-family:var(--font-ui); font-size:21px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.13em; margin:0 0 22px; color:var(--ink);
+}
+#authCard h1 span{color:var(--ink-dim); font-weight:400;}
+#authCard h3{
+  font-family:var(--font-ui); font-size:13px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.1em; color:var(--ink); text-align:left;
+}
+#authCard label{
+  display:block; text-align:left; font-size:9px; text-transform:uppercase;
+  letter-spacing:.13em; color:var(--ink-dim); margin:16px 0 6px; font-weight:700;
+}
+#authCard input{width:100%; font-size:16px; padding:12px 14px;}
+
+.authMsg{
+  font-size:11px; color:var(--brand-pink); margin-top:12px; text-align:left;
+  min-height:1px; line-height:1.6;
+}
+.authStatusMsg{
+  font-size:13px; color:var(--ink-mid); line-height:1.75; text-align:left;
+}
+.authSwitch{
+  font-size:10.5px; color:var(--ink-faint); margin-top:20px; text-align:center;
+  letter-spacing:.02em;
+}
+.authSwitch a{ color:var(--ink); font-weight:600; text-decoration:none; border-bottom:1px solid var(--edge-strong); }
+.authSwitch a:hover{ border-bottom-color:var(--ink); }
+
+#authRequestsView{ text-align:left; }
+#authRequestsCount{
+  margin-top:0; text-align:left; font-size:10.5px; color:var(--ink-dim);
+  text-transform:uppercase; letter-spacing:.1em; font-weight:600;
+}
+#authRequestsList{ display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y:auto; }
+.authRequestItem{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:11px 13px; border:1px solid var(--edge-strong); border-radius:var(--r-md);
+  background:var(--paper-1); font-size:12px; color:var(--ink-mid);
+  font-family:var(--font-data);
+}
+.authRequestItem .authReqActions{ display:flex; gap:6px; flex-shrink:0; }
+.authRequestItem .btn{ padding:6px 11px; font-size:9.5px; }
 
 /* --- Filigrane de tracabilite --------------------------------------------- */
 #watermarkLayer{
