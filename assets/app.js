@@ -93,8 +93,8 @@ const COLOR_MEANING = {
 // l'approuve pas depuis le panneau "Demandes d'acces" (max 5 lecteurs,
 // verifie aussi cote serveur par trigger SQL).
 // ---------------------------------------------------------------------------
-const SUPABASE_URL = "https://xonxwhdswzvooqfptbn.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_lIAflZvLkzkZpKHbIWR-RA_wKP_5Wjz";
+const SUPABASE_URL = "https://xonxwhdswzvooqqfptbn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhvbnh3aGRzd3p2b29xcWZwdGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MjQ5MzgsImV4cCI6MjEwMTEwMDkzOH0.fp6oEv6ooEUj7q-O_0iYPzvDbBb82XmNnEFB8z5eIec";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let authProfile = null; // { id, email, status: pending|approved|refused, role: admin|lecteur }
