@@ -85,6 +85,158 @@ const COLOR_MEANING = {
 };
 
 // ---------------------------------------------------------------------------
+// AUTHENTIFICATION — Supabase (email + mot de passe, liste blanche validee
+// manuellement par l'administrateur). Remplace l'ancien PIN local et les
+// mots de passe par lecteur embarques dans le JSON exporte.
+// L'admin (Shams) est promu manuellement en base (role=admin, status=approved).
+// Toute autre personne qui s'inscrit reste "pending" tant que l'admin ne
+// l'approuve pas depuis le panneau "Demandes d'acces" (max 5 lecteurs,
+// verifie aussi cote serveur par trigger SQL).
+// ---------------------------------------------------------------------------
+const SUPABASE_URL = "https://xonxwhdswzvooqfptbn.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_lIAflZvLkzkZpKHbIWR-RA_wKP_5Wjz";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let authProfile = null; // { id, email, status: pending|approved|refused, role: admin|lecteur }
+
+function showAuthView(name){
+  ["authLoginView","authRequestView","authPendingView","authRefusedView","authRequestsView"].forEach(id=>{
+    document.getElementById(id).style.display = (id===name) ? "" : "none";
+  });
+  document.getElementById("authScreen").style.display = "flex";
+}
+function hideAuthScreen(){
+  document.getElementById("authScreen").style.display = "none";
+}
+
+document.getElementById("authLoginBtn").innerHTML = "Se connecter";
+document.getElementById("authRequestBtn").innerHTML = "Envoyer la demande";
+document.getElementById("authPendingLogoutBtn").innerHTML = icon("logout") + " Se déconnecter";
+document.getElementById("authRefusedLogoutBtn").innerHTML = icon("logout") + " Se déconnecter";
+document.getElementById("authRequestsContinueBtn").innerHTML = "Continuer vers l'application";
+
+document.getElementById("authGoRequestLink").onclick = (e)=>{
+  e.preventDefault();
+  document.getElementById("authError").textContent = "";
+  showAuthView("authRequestView");
+};
+document.getElementById("authGoLoginLink").onclick = (e)=>{
+  e.preventDefault();
+  document.getElementById("authRequestError").textContent = "";
+  showAuthView("authLoginView");
+};
+
+document.getElementById("authLoginBtn").onclick = async ()=>{
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  const errEl = document.getElementById("authError");
+  errEl.textContent = "";
+  if(!email || !password){ errEl.textContent = "Email et mot de passe requis."; return; }
+  const btn = document.getElementById("authLoginBtn");
+  btn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  if(error){ errEl.textContent = "Identifiants incorrects."; return; }
+  await handleAuthState();
+};
+
+document.getElementById("authRequestBtn").onclick = async ()=>{
+  const email = document.getElementById("reqEmail").value.trim();
+  const p1 = document.getElementById("reqPassword").value;
+  const p2 = document.getElementById("reqPassword2").value;
+  const errEl = document.getElementById("authRequestError");
+  errEl.textContent = "";
+  if(!email || !p1){ errEl.textContent = "Email et mot de passe requis."; return; }
+  if(p1.length < 6){ errEl.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
+  if(p1 !== p2){ errEl.textContent = "Les mots de passe ne correspondent pas."; return; }
+  const btn = document.getElementById("authRequestBtn");
+  btn.disabled = true;
+  const { error } = await sb.auth.signUp({ email, password: p1 });
+  btn.disabled = false;
+  if(error){ errEl.textContent = "Impossible de créer le compte : " + error.message; return; }
+  await handleAuthState();
+};
+
+document.getElementById("authPendingLogoutBtn").onclick = async ()=>{ await sb.auth.signOut(); showAuthView("authLoginView"); };
+document.getElementById("authRefusedLogoutBtn").onclick = async ()=>{ await sb.auth.signOut(); showAuthView("authLoginView"); };
+document.getElementById("authRequestsContinueBtn").onclick = ()=>{ hideAuthScreen(); boot(); };
+
+async function fetchProfile(userId){
+  const { data, error } = await sb.from("profiles").select("*").eq("id", userId).single();
+  if(error) return null;
+  return data;
+}
+async function loadPendingRequests(){
+  const { data } = await sb.from("profiles").select("*").eq("status","pending").order("created_at",{ascending:true});
+  return data || [];
+}
+async function loadApprovedLecteurCount(){
+  const { count } = await sb.from("profiles").select("*", {count:"exact", head:true}).eq("status","approved").eq("role","lecteur");
+  return count || 0;
+}
+window.approveRequest = async (id)=>{
+  const count = await loadApprovedLecteurCount();
+  if(count >= 5){ alert("Limite de 5 lecteurs approuvés déjà atteinte."); return; }
+  const { error } = await sb.from("profiles").update({status:"approved", role:"lecteur"}).eq("id", id);
+  if(error){ alert("Erreur : " + error.message); return; }
+  await renderAuthRequests();
+};
+window.refuseRequest = async (id)=>{
+  const { error } = await sb.from("profiles").update({status:"refused"}).eq("id", id);
+  if(error){ alert("Erreur : " + error.message); return; }
+  await renderAuthRequests();
+};
+async function renderAuthRequests(){
+  const pending = await loadPendingRequests();
+  const count = await loadApprovedLecteurCount();
+  document.getElementById("authRequestsCount").textContent =
+    pending.length + " demande(s) en attente · " + count + "/5 lecteurs approuvés";
+  const list = document.getElementById("authRequestsList");
+  if(!pending.length){
+    list.innerHTML = `<div class="empty" style="padding:18px;">Aucune demande en attente.</div>`;
+  } else {
+    list.innerHTML = pending.map(p=>`
+      <div class="authRequestItem">
+        <span>${p.email}</span>
+        <div class="authReqActions">
+          <button class="btn primary" onclick="approveRequest('${p.id}')">${icon("check",12)} Approuver</button>
+          <button class="btn danger" onclick="refuseRequest('${p.id}')">${icon("x",12)} Refuser</button>
+        </div>
+      </div>`).join("");
+  }
+  return pending.length;
+}
+
+async function handleAuthState(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){
+    authProfile = null;
+    showAuthView("authLoginView");
+    return;
+  }
+  const profile = await fetchProfile(session.user.id);
+  authProfile = profile;
+  if(!profile || profile.status === "pending"){
+    showAuthView("authPendingView");
+    return;
+  }
+  if(profile.status === "refused"){
+    showAuthView("authRefusedView");
+    return;
+  }
+  // approved : admin voit d'abord les demandes en attente, s'il y en a
+  if(profile.role === "admin"){
+    const pendingCount = await renderAuthRequests();
+    if(pendingCount > 0){
+      showAuthView("authRequestsView");
+      return;
+    }
+  }
+  hideAuthScreen();
+  boot();
+}
+
+// ---------------------------------------------------------------------------
 // DONNÉES — plusieurs baies, une par lieu
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -146,19 +298,6 @@ function matchesQuery(c){
 }
 
 // ---------------------------------------------------------------------------
-// SÉCURITÉ ADMIN — voir le fichier README-SECURITE.md avant tout déploiement
-// ---------------------------------------------------------------------------
-// Si ADMIN_PIN_HASH est renseigné (hash SHA-256 de ton code, généré hors-ligne),
-// le premier visiteur venu ne peut plus "créer" un code admin lui-même : il doit
-// connaître le vrai code. Tant que cette valeur reste vide, l'app se comporte en
-// mode développement (pratique ici, dans cet aperçu) — NE PAS déployer tel quel.
-const ADMIN_PIN_HASH = "";
-async function sha256Hex(text){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-// ---------------------------------------------------------------------------
 // QR CODE (rendu SVG local, sans appel réseau)
 // ---------------------------------------------------------------------------
 function renderQR(text, el){
@@ -182,7 +321,7 @@ function renderQR(text, el){
 }
 
 // ---------------------------------------------------------------------------
-// ROUTING / SESSION
+// ROUTING
 // ---------------------------------------------------------------------------
 function baieUrl(baie){
   if(window.DNDVDL_MONOFILE){
@@ -193,66 +332,6 @@ function baieUrl(baie){
   const base = window.DNDVDL_BASE || "./";
   return new URL(base + baie.slug + "/", location.href).href;
 }
-// Le carton d'accueil sert a deux ecrans (import initial / connexion) :
-// on conserve son balisage d'origine pour pouvoir le restaurer apres import.
-const LOGIN_CARD_HTML = document.getElementById("loginCard").innerHTML;
-function restoreLoginCard(){
-  document.getElementById("loginCard").innerHTML = LOGIN_CARD_HTML;
-  wireLoginCard();
-}
-
-function showLogin(){
-  document.getElementById("appRoot").style.display = "none";
-  const scr = document.getElementById("loginScreen");
-  scr.style.display = "flex";
-  const baie = currentBaie();
-  // Le sigle de baie n'est plus affiche ici : sans objet avant identification.
-  document.getElementById("loginAdminBtn").innerHTML = icon("shield") + " Administrateur";
-  const sel = document.getElementById("loginViewerSelect");
-  sel.innerHTML = baie.viewers.length
-    ? baie.viewers.map(v=>`<option value="${v.id}">${v.nom}</option>`).join("")
-    : `<option value="">Aucun accès configuré</option>`;
-  document.getElementById("loginConsultBtn").innerHTML = icon("eye") + " Accéder en consultation";
-  document.getElementById("loginPassword").value = "";
-  document.getElementById("loginNote").textContent = baie.viewers.length
-    ? "Demandez le mot de passe à l'administrateur."
-    : "Aucun accès consultation n'a encore été configuré pour cette baie.";
-}
-function hideLogin(){
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("appRoot").style.display = "";
-}
-function checkAccess(){
-  const baie = currentBaie();
-  if(storageGet(sessionStorage, "netmap_admin")==="true"){
-    mode = "admin"; hideLogin(); applyMode(); render(); return;
-  }
-  const v = storageGet(sessionStorage, "netmap_viewer_"+baie.id);
-  if(v){
-    mode = "consult"; viewerName = JSON.parse(v).nom; hideLogin(); applyMode(); render(); return;
-  }
-  showLogin();
-}
-function wireLoginCard(){
-  const adminBtn = document.getElementById("loginAdminBtn");
-  if(adminBtn) adminBtn.onclick = ()=>{
-    if(ADMIN_PIN_HASH){ openPinModal("enter"); return; }
-    const pin = storageGet(localStorage, "netmap_pin");
-    openPinModal(pin ? "enter" : "create");
-  };
-  const consultBtn = document.getElementById("loginConsultBtn");
-  if(consultBtn) consultBtn.onclick = ()=>{
-    const baie = currentBaie();
-    const id = document.getElementById("loginViewerSelect").value;
-    const pass = document.getElementById("loginPassword").value;
-    const v = baie.viewers.find(x=>x.id===id);
-    if(!v || pass !== v.password){ alert("Nom ou mot de passe incorrect."); return; }
-    storageSet(sessionStorage, "netmap_viewer_"+baie.id, JSON.stringify({nom:v.nom}));
-    mode = "consult"; viewerName = v.nom;
-    hideLogin(); applyMode(); render();
-  };
-}
-wireLoginCard();
 
 function applyMode(){
   document.body.dataset.mode = mode;
@@ -274,7 +353,7 @@ function applyMode(){
 // plan : ce controle reste visible meme pendant l'apercu, pour revenir en un
 // clic, independamment de "mode" qui lui pilote l'affichage courant.
 let previewingAs = null;
-function isAdminSession(){ return storageGet(sessionStorage, "netmap_admin") === "true"; }
+function isAdminSession(){ return authProfile && authProfile.role === "admin"; }
 function allViewerNames(){
   const names = new Set();
   DATA.baies.forEach(b => (b.viewers||[]).forEach(v => names.add(v.nom)));
@@ -312,8 +391,8 @@ function enterPreview(name){
 }
 function exitPreview(){
   previewingAs = null;
-  mode = "admin";
-  viewerName = "";
+  mode = authProfile && authProfile.role === "admin" ? "admin" : "consult";
+  viewerName = authProfile ? authProfile.email : "";
   selectedConnId = null; selectedExtra = null;
   applyMode();
   renderBaiePicker();
@@ -350,15 +429,9 @@ function renderWatermark(){
   _watermarkTimer = setInterval(paint, 30000);
 }
 document.getElementById("logoutBtn").innerHTML = icon("logout") + `<span class="btnLabel">Déconnexion</span>`;
-document.getElementById("logoutBtn").onclick = ()=>{
-  const baie = currentBaie();
-  if(mode==="admin" || previewingAs) storageRemove(sessionStorage, "netmap_admin");
-  else storageRemove(sessionStorage, "netmap_viewer_"+baie.id);
-  selectedConnId = null; selectedExtra = null;
-  previewingAs = null;
-  mode = null; viewerName = "";
-  renderWatermark();
-  checkAccess();
+document.getElementById("logoutBtn").onclick = async ()=>{
+  await sb.auth.signOut();
+  location.reload();
 };
 
 // ---------------------------------------------------------------------------
@@ -392,7 +465,8 @@ document.getElementById("baiePicker").addEventListener("change", e=>{
     selectedConnId = null; selectedExtra = null;
     activeSwitchId = baieSwitches()[0]?.id;
     try{ history.replaceState(null, "", baieUrl(target)); }catch(e){ /* file:// ou contexte restreint : sans consequence */ }
-    checkAccess();
+    applyMode();
+    render();
     return;
   }
   // Déploiement NAS : on change réellement d'URL, chaque bâtiment a la sienne
@@ -1028,44 +1102,6 @@ document.getElementById("saveBtn").onclick = ()=>{
 };
 
 // ---------------------------------------------------------------------------
-// MODALE CODE ADMIN
-// ---------------------------------------------------------------------------
-const pinOverlay = document.getElementById("pinOverlay");
-let pinKind = "enter";
-function openPinModal(kind){
-  pinKind = kind;
-  document.getElementById("pin1").value = "";
-  document.getElementById("pin2").value = "";
-  document.getElementById("pinConfirmWrap").style.display = kind==="create" ? "block" : "none";
-  document.getElementById("pinTitle").innerHTML = icon("shield",17) + (kind==="create" ? " Créer un code admin" : " Code admin");
-  document.getElementById("pinLabel1").textContent = kind==="create" ? "Nouveau code (4 caractères min.)" : "Code";
-  pinOverlay.classList.add("open");
-  setTimeout(()=>document.getElementById("pin1").focus(),50);
-}
-document.getElementById("pinCancelBtn").onclick = ()=> pinOverlay.classList.remove("open");
-document.getElementById("pinSubmitBtn").onclick = async ()=>{
-  const p1 = document.getElementById("pin1").value.trim();
-  if(pinKind==="create"){
-    const p2 = document.getElementById("pin2").value.trim();
-    if(p1.length<4){ alert("Le code doit contenir au moins 4 caractères."); return; }
-    if(p1!==p2){ alert("Les deux codes ne correspondent pas."); return; }
-    storageSet(localStorage, "netmap_pin", p1);
-    storageSet(sessionStorage, "netmap_admin", "true");
-    mode = "admin"; applyMode(); pinOverlay.classList.remove("open"); hideLogin(); render();
-  } else {
-    let ok;
-    if(ADMIN_PIN_HASH){
-      ok = (await sha256Hex(p1)) === ADMIN_PIN_HASH;
-    } else {
-      ok = p1 === storageGet(localStorage, "netmap_pin");
-    }
-    if(!ok){ alert("Code incorrect."); return; }
-    storageSet(sessionStorage, "netmap_admin", "true");
-    mode = "admin"; applyMode(); pinOverlay.classList.remove("open"); hideLogin(); render();
-  }
-};
-
-// ---------------------------------------------------------------------------
 // MODALE ÉQUIPEMENTS (baie + bandeaux + switches)
 // ---------------------------------------------------------------------------
 const equipOverlay = document.getElementById("equipOverlay");
@@ -1152,7 +1188,12 @@ function renderEquipContent(){
 }
 
 // ---------------------------------------------------------------------------
-// MODALE ACCÈS (mots de passe de consultation par personne)
+// MODALE ACCÈS
+// Informations sur les personnes ayant un lien avec cette baie (notes
+// organisationnelles). Ne gere plus l'authentification : l'acces a
+// l'application est desormais entierement pilote par Supabase (voir plus
+// haut). Ce panneau reste utile pour consigner qui a un acces physique/
+// visuel a une baie donnee, independamment du compte de connexion.
 // ---------------------------------------------------------------------------
 const accessOverlay = document.getElementById("accessOverlay");
 document.getElementById("accessBtn").onclick = ()=>{
@@ -1164,37 +1205,16 @@ document.getElementById("accessBtn").onclick = ()=>{
 document.getElementById("accessCloseBtn").onclick = ()=> accessOverlay.classList.remove("open");
 function renderAccessContent(){
   const baie = currentBaie();
-  let html = `<button class="btn primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="regenerateAllPasswords()">${icon("keyround")} Régénérer tous les codes (4 chiffres)</button>
-    <div class="pinHint" style="margin-bottom:16px;">Génère un nouveau code à 4 chiffres pour <strong>chaque personne</strong>, synchronisé sur <strong>toutes ses baies</strong> — pas seulement celle-ci.</div>`;
+  let html = `<div class="pinHint" style="margin-bottom:16px;">Ces notes n'accordent plus d'accès à l'application : la connexion se fait désormais par email via Supabase (bouton Déconnexion → écran de connexion). Cette liste reste utile pour consigner qui a un accès physique ou visuel à cette baie.</div>`;
   html += baie.viewers.map(v=>`
     <div class="equipCard">
       <label>Nom</label><input value="${v.nom}" oninput="updateViewer('${v.id}','nom',this.value)">
-      <label>Mot de passe</label><input value="${v.password}" oninput="updateViewer('${v.id}','password',this.value)">
-      <button class="btn danger" style="margin-top:10px; width:100%; justify-content:center;" onclick="removeViewer('${v.id}')">${icon("trash")} Retirer l'accès</button>
+      <label>Commentaire</label><input value="${v.commentaire||""}" oninput="updateViewer('${v.id}','commentaire',this.value)">
+      <button class="btn danger" style="margin-top:10px; width:100%; justify-content:center;" onclick="removeViewer('${v.id}')">${icon("trash")} Retirer</button>
     </div>`).join("");
   html += `<button class="btn primary" style="width:100%; justify-content:center;" onclick="addViewer()">${icon("plus")} Ajouter une personne</button>`;
   document.getElementById("accessContent").innerHTML = html;
 }
-window.regenerateAllPasswords = ()=>{
-  const names = allViewerNames();
-  if(!names.length){ alert("Aucune personne enregistrée pour l'instant."); return; }
-  if(!confirm("Générer un nouveau code à 4 chiffres pour "+names.length+" personne(s) ?\n\nLes anciens codes resteront valables sur tout appareil qui n'aura pas réimporté le fichier mis à jour — voir la remarque plus bas.")) return;
-  const used = new Set();
-  const newCodes = {};
-  names.forEach(name=>{
-    let code;
-    do { code = String(Math.floor(1000 + Math.random()*9000)); } while(used.has(code));
-    used.add(code);
-    newCodes[name] = code;
-  });
-  DATA.baies.forEach(b=>{
-    (b.viewers||[]).forEach(v=>{ if(newCodes[v.nom]) v.password = newCodes[v.nom]; });
-  });
-  save();
-  renderAccessContent();
-  const summary = Object.entries(newCodes).map(([n,c])=>n+" : "+c).join("\n");
-  alert("Nouveaux codes :\n\n"+summary+"\n\nÀ communiquer individuellement. Chaque code ne prend effet que lorsque la personne réimporte le fichier exporté — voir la remarque à ce sujet.");
-};
 window.updateViewer = (id, field, value)=>{
   const baie = currentBaie();
   const v = baie.viewers.find(x=>x.id===id);
@@ -1208,7 +1228,7 @@ window.removeViewer = (id)=>{
 };
 window.addViewer = ()=>{
   const baie = currentBaie();
-  baie.viewers.push({id:"v"+Date.now(), nom:"Nouvelle personne", password:""});
+  baie.viewers.push({id:"v"+Date.now(), nom:"Nouvelle personne", commentaire:""});
   save(); renderAccessContent();
 };
 
@@ -1239,55 +1259,6 @@ document.getElementById("qrCloseBtn").onclick = ()=> qrOverlay.classList.remove(
 // ---------------------------------------------------------------------------
 document.getElementById("exportBtn").onclick = ()=>{
   if(mode!=="admin") return;
-  // A chaque export, un nouveau jeu de codes a 4 chiffres est genere — le
-  // fichier exporte devient ainsi le seul detenteur des codes de consultation.
-  const usedCodes = new Set();
-  const genCode = ()=>{
-    let code;
-    do { code = String(Math.floor(1000 + Math.random()*9000)); } while(usedCodes.has(code));
-    usedCodes.add(code);
-    return code;
-  };
-
-  const names = allViewerNames();
-  let summary = "";
-  if(names.length){
-    const newCodes = {};
-    names.forEach(name=>{ newCodes[name] = genCode(); });
-    DATA.baies.forEach(b=>{
-      (b.viewers||[]).forEach(v=>{ if(newCodes[v.nom]) v.password = newCodes[v.nom]; });
-    });
-    save();
-    if(document.getElementById("accessContent")) renderAccessContent();
-    summary = Object.entries(newCodes).map(([n,c])=>n+" : "+c).join("\n");
-  }
-
-  // Code admin : regenere lui aussi, applique uniquement a CET appareil,
-  // et SEULEMENT si l'administrateur confirme l'avoir note. Contrairement
-  // aux codes de consultation, une perte ici bloque l'acces admin lui-meme —
-  // donc jamais d'application automatique et silencieuse.
-  let adminLine = "";
-  if(!ADMIN_PIN_HASH){
-    const adminCode = genCode();
-    const confirmed = confirm(
-      "Nouveau code Administrateur proposé : " + adminCode +
-      "\n\nNote-le maintenant — sans lui, plus d'accès admin sur cet appareil.\n\n" +
-      "OK pour l'appliquer maintenant, Annuler pour garder le code actuel."
-    );
-    if(confirmed){
-      storageSet(localStorage, "netmap_pin", adminCode);
-      adminLine = "\n\nCode Administrateur mis à jour (cet appareil uniquement) : " + adminCode;
-    } else {
-      adminLine = "\n\nCode Administrateur inchangé.";
-    }
-  } else {
-    adminLine = "\n\n(Code Administrateur géré par hash — voir README-SECURITE, non régénéré automatiquement ici.)";
-  }
-
-  if(names.length || !ADMIN_PIN_HASH){
-    alert("Nouveaux codes générés :\n\n"+summary+adminLine+"\n\nLes codes de consultation sont dans le fichier exporté, à communiquer individuellement. Le code Administrateur n'y figure jamais.");
-  }
-
   const blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -1311,7 +1282,6 @@ document.getElementById("fileImport").addEventListener("change", e=>{
       normalizeData();
       selectedConnId = null; selectedExtra = null;
       save();
-      restoreLoginCard();
       boot();
     }catch(err){ alert("Fichier invalide : "+err.message); }
   };
@@ -1320,9 +1290,12 @@ document.getElementById("fileImport").addEventListener("change", e=>{
 });
 
 // ---------------------------------------------------------------------------
-// BOOT
+// BOOT — appele uniquement apres authentification reussie (voir handleAuthState)
 // ---------------------------------------------------------------------------
 function boot(){
+  mode = authProfile && authProfile.role === "admin" ? "admin" : "consult";
+  viewerName = authProfile ? authProfile.email : "";
+
   // Coquille vide : tant qu'aucune donnée n'a été importée, on présente
   // l'écran d'import plutôt qu'un écran de connexion sans objet.
   if(!DATA.baies || DATA.baies.length === 0){ showEmptyState(); return; }
@@ -1332,7 +1305,10 @@ function boot(){
   currentBaieId = found ? found.id : DATA.baies[0].id;
   activeSwitchId = baieSwitches()[0]?.id;
   renderBaiePicker();
-  checkAccess();
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appRoot").style.display = "";
+  applyMode();
+  render();
 }
 
 function showEmptyState(){
@@ -1355,4 +1331,5 @@ function showEmptyState(){
     document.getElementById("fileImport").click();
   };
 }
-boot();
+
+handleAuthState();
