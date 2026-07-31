@@ -35,6 +35,56 @@
 
 <input type="file" id="fileImport" accept="application/json">
 
+<div id="authScreen">
+  <div id="authCard">
+    <h1>DNDVDL<span style="color:var(--ink-dim)">-MAP</span></h1>
+
+    <!-- Connexion -->
+    <div id="authLoginView">
+      <label>Email</label>
+      <input id="authEmail" type="email" autocomplete="username">
+      <label>Mot de passe</label>
+      <input id="authPassword" type="password" autocomplete="current-password">
+      <button class="btn primary" id="authLoginBtn" style="width:100%; justify-content:center; margin-top:14px;"></button>
+      <div id="authError" class="authMsg"></div>
+      <div id="authSwitchToRequest" class="authSwitch">Pas encore de compte ? <a href="#" id="authGoRequestLink">Demander un accès</a></div>
+    </div>
+
+    <!-- Demande d'accès -->
+    <div id="authRequestView" style="display:none;">
+      <label>Email</label>
+      <input id="reqEmail" type="email" autocomplete="username">
+      <label>Mot de passe</label>
+      <input id="reqPassword" type="password" autocomplete="new-password">
+      <label>Confirmer le mot de passe</label>
+      <input id="reqPassword2" type="password" autocomplete="new-password">
+      <button class="btn primary" id="authRequestBtn" style="width:100%; justify-content:center; margin-top:14px;"></button>
+      <div id="authRequestError" class="authMsg"></div>
+      <div id="authSwitchToLogin" class="authSwitch">Déjà un compte ? <a href="#" id="authGoLoginLink">Se connecter</a></div>
+    </div>
+
+    <!-- En attente de validation -->
+    <div id="authPendingView" style="display:none;">
+      <div class="authStatusMsg">Ta demande d'accès a bien été envoyée. Elle est en attente de validation par l'administrateur.</div>
+      <button class="btn" id="authPendingLogoutBtn" style="width:100%; justify-content:center; margin-top:18px;"></button>
+    </div>
+
+    <!-- Accès refusé -->
+    <div id="authRefusedView" style="display:none;">
+      <div class="authStatusMsg">L'accès à cette application t'a été refusé.</div>
+      <button class="btn" id="authRefusedLogoutBtn" style="width:100%; justify-content:center; margin-top:18px;"></button>
+    </div>
+
+    <!-- Panneau admin : demandes en attente -->
+    <div id="authRequestsView" style="display:none;">
+      <h3 style="margin:0 0 4px;">Demandes d'accès</h3>
+      <div id="authRequestsCount" class="authSwitch"></div>
+      <div id="authRequestsList" style="margin-top:12px;"></div>
+      <button class="btn primary" id="authRequestsContinueBtn" style="width:100%; justify-content:center; margin-top:16px;"></button>
+    </div>
+  </div>
+</div>
+
 <div id="loginScreen">
   <div id="loginCard">
     <h1>DNDVDL<span style="color:var(--ink-dim)">-MAP</span></h1>
@@ -179,6 +229,7 @@
   // le changement de baie doit rester en memoire, jamais une navigation.
   window.DNDVDL_MONOFILE = true;
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./assets/qrcode.js"></script>
 <script src="./assets/app.js"></script>
 <script>
