@@ -369,6 +369,17 @@ svg#cables{position:absolute; top:0; left:0; pointer-events:none; overflow:visib
   border-color:var(--edge-strong);
 }
 
+/* --- Rangee groupee : plusieurs elements cote a cote (disposition physique reelle) --- */
+.rackRow{
+  display:flex; gap:7px; margin-bottom:7px;
+}
+.rackRow .rackBar{
+  flex:1; margin-bottom:0; min-width:0;
+}
+.rackRow .rackBar span{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
 /* --- Legende ------------------------------------------------------------- */
 #legend{
   margin-top:34px; padding:18px 20px; max-width:600px;
