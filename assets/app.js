@@ -627,6 +627,23 @@ if(document.fonts && document.fonts.ready){
 // PORT — reproduit un port de bandeau reel : alveole rectangulaire (keystone)
 // surmontant son numero grave sur la face avant.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ETIREMENT VISUEL DE RANGEE — certains panneaux (ex: tiroir fibre 12 ports,
+// switch 8 ports) doivent occuper la meme largeur qu'un panneau de reference
+// (ex: bandeau 24 ports) meme s'ils ont moins de ports. On espace alors les
+// ports reels uniformement sur cette largeur cible plutot que de les laisser
+// serres a gauche.
+// ---------------------------------------------------------------------------
+function applyRowStretch(rowsWrap, targetPortCount){
+  if(!targetPortCount) return;
+  const portW = 20, gap = 3;
+  const targetWidth = targetPortCount*portW + (targetPortCount-1)*gap;
+  rowsWrap.querySelectorAll(".portRow").forEach(row=>{
+    row.style.width = targetWidth + "px";
+    row.style.justifyContent = "space-between";
+  });
+}
+
 function makePortSlot({num, ref, conn, isSel, dimmed, onClick}){
   const slot = document.createElement("div");
   slot.className = "portSlot " + (conn ? "used" : "free")
@@ -686,6 +703,7 @@ function buildBandeauBlock(bd){
   }
   frame.appendChild(sL); frame.appendChild(rowsWrap); frame.appendChild(sR);
   block.appendChild(frame);
+  applyRowStretch(rowsWrap, bd.stretchToPorts);
   return block;
 }
 
@@ -727,10 +745,9 @@ function buildSwitchBlock(sw){
   }
   frame.appendChild(sL); frame.appendChild(rowsWrap); frame.appendChild(sR);
   block.appendChild(frame);
+  applyRowStretch(rowsWrap, sw.stretchToPorts);
   return block;
-}
-
-function renderRack(){
+}function renderRack(){
   const canvas = document.getElementById("rackCanvas");
   canvas.innerHTML = "";
   const baie = currentBaie();
