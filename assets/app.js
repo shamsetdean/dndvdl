@@ -174,10 +174,12 @@ async function loadApprovedLecteurCount(){
   const { count } = await sb.from("profiles").select("*", {count:"exact", head:true}).eq("status","approved").eq("role","lecteur");
   return count || 0;
 }
-window.approveRequest = async (id)=>{
-  const count = await loadApprovedLecteurCount();
-  if(count >= 5){ alert("Limite de 5 lecteurs approuvés déjà atteinte."); return; }
-  const { error } = await sb.from("profiles").update({status:"approved", role:"lecteur"}).eq("id", id);
+window.approveRequest = async (id, role)=>{
+  if(role === "lecteur"){
+    const count = await loadApprovedLecteurCount();
+    if(count >= 4){ alert("Limite de 4 lecteurs approuvés déjà atteinte."); return; }
+  }
+  const { error } = await sb.from("profiles").update({status:"approved", role}).eq("id", id);
   if(error){ alert("Erreur : " + error.message); return; }
   await renderAuthRequests();
 };
@@ -190,7 +192,7 @@ async function renderAuthRequests(){
   const pending = await loadPendingRequests();
   const count = await loadApprovedLecteurCount();
   document.getElementById("authRequestsCount").textContent =
-    pending.length + " demande(s) en attente · " + count + "/5 lecteurs approuvés";
+    pending.length + " demande(s) en attente · " + count + "/4 lecteurs approuvés";
   const list = document.getElementById("authRequestsList");
   if(!pending.length){
     list.innerHTML = `<div class="empty" style="padding:18px;">Aucune demande en attente.</div>`;
@@ -199,7 +201,8 @@ async function renderAuthRequests(){
       <div class="authRequestItem">
         <span>${p.email}</span>
         <div class="authReqActions">
-          <button class="btn primary" onclick="approveRequest('${p.id}')">${icon("check",12)} Approuver</button>
+          <button class="btn" onclick="approveRequest('${p.id}','lecteur')">${icon("eye",12)} Lecture seule</button>
+          <button class="btn primary" onclick="approveRequest('${p.id}','editeur')">${icon("pencil",12)} Lecture + écriture</button>
           <button class="btn danger" onclick="refuseRequest('${p.id}')">${icon("x",12)} Refuser</button>
         </div>
       </div>`).join("");
@@ -333,11 +336,20 @@ function baieUrl(baie){
   return new URL(base + baie.slug + "/", location.href).href;
 }
 
+// Admin et editeur ont tous deux les droits d'ecriture dans l'app (ajout,
+// modification, suppression, export). Seul l'admin gere en plus les
+// demandes d'acces (ecran a la connexion, pas un bouton dans l'app).
+function roleToMode(role){
+  return (role === "admin" || role === "editeur") ? "admin" : "consult";
+}
+
 function applyMode(){
   document.body.dataset.mode = mode;
   const badge = document.getElementById("sessionBadge");
   if(previewingAs){
     badge.innerHTML = icon("eye",13) + " " + previewingAs + " <span style='opacity:.6'>(aperçu admin)</span>";
+  } else if(mode==="admin" && authProfile && authProfile.role === "editeur"){
+    badge.innerHTML = icon("pencil",13) + " Éditeur";
   } else {
     badge.innerHTML = mode==="admin" ? (icon("shield",13)+" Admin") : (icon("eye",13)+" "+(viewerName||"Consultation"));
   }
@@ -391,7 +403,7 @@ function enterPreview(name){
 }
 function exitPreview(){
   previewingAs = null;
-  mode = authProfile && authProfile.role === "admin" ? "admin" : "consult";
+  mode = authProfile ? roleToMode(authProfile.role) : "consult";
   viewerName = authProfile ? authProfile.email : "";
   selectedConnId = null; selectedExtra = null;
   applyMode();
@@ -1332,7 +1344,7 @@ document.getElementById("fileImport").addEventListener("change", e=>{
 // BOOT — appele uniquement apres authentification reussie (voir handleAuthState)
 // ---------------------------------------------------------------------------
 function boot(){
-  mode = authProfile && authProfile.role === "admin" ? "admin" : "consult";
+  mode = authProfile ? roleToMode(authProfile.role) : "consult";
   viewerName = authProfile ? authProfile.email : "";
 
   // Coquille vide : tant qu'aucune donnée n'a été importée, on présente
