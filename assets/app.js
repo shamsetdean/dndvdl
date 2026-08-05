@@ -808,6 +808,22 @@ function renderOrderedRack(stage, baie){
     } else if(entry.type==="switch"){
       const sw = DATA.switches.find(s=>s.id===entry.id);
       if(sw) stage.appendChild(buildSwitchBlock(sw));
+    } else if(entry.type==="row"){
+      // Plusieurs elements affiches cote a cote sur la meme rangee — reflete
+      // une disposition physique reelle (ex: deux NAS poses l'un a cote de
+      // l'autre sur la meme etagere plutot que l'un au-dessus de l'autre).
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "rackRow";
+      (entry.items||[]).forEach(sub=>{
+        const key = sub.type==="tiroir"?"tiroirs":sub.type==="nas"?"nas":sub.type==="equipement"?"equipements":"onduleurs";
+        const item = (baie[key]||[]).find(i=>i.id===sub.id);
+        if(item){
+          const iconName = sub.type==="equipement" ? (EQUIP_TYPE_ICON[item.type]||"box")
+                          : catLabel[sub.type][0];
+          rowDiv.appendChild(makeBar(sub.type, item, iconName));
+        }
+      });
+      stage.appendChild(rowDiv);
     } else {
       const key = entry.type==="tiroir"?"tiroirs":entry.type==="nas"?"nas":entry.type==="equipement"?"equipements":"onduleurs";
       const item = (baie[key]||[]).find(i=>i.id===entry.id);
@@ -920,7 +936,13 @@ window.deleteExtra = (type, id)=>{
   const baie = currentBaie();
   const key = extraKey(type);
   baie[key] = baie[key].filter(i=>i.id!==id);
-  if(baie.rack) baie.rack = baie.rack.filter(e=>!(e.type===type && e.id===id));
+  if(baie.rack){
+    baie.rack = baie.rack.filter(e=>!(e.type===type && e.id===id));
+    baie.rack.forEach(e=>{
+      if(e.type==="row") e.items = (e.items||[]).filter(sub=>!(sub.type===type && sub.id===id));
+    });
+    baie.rack = baie.rack.filter(e=> e.type!=="row" || (e.items && e.items.length>0));
+  }
   selectedExtra = null; save(); render();
 };
 
