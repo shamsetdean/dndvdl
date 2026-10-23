@@ -97,6 +97,11 @@ svg.ic{flex-shrink:0; stroke-width:1.7;}
 body[data-mode="admin"] .admin-only{display:inline-flex;}
 .admin-block{display:none;}
 body[data-mode="admin"] .admin-block{display:flex;}
+/* Hors mode admin (lecteur, apercu "voir comme"), les outils de modification
+   restent masques meme si une autre regle (.btn, .panelActions...) leur
+   redonne un affichage : cette regle, plus prioritaire, l'emporte toujours. */
+body:not([data-mode="admin"]) .admin-only,
+body:not([data-mode="admin"]) .admin-block{display:none !important;}
 
 /* --- Cartouches / cadre technique ---------------------------------------- */
 body::after, #frameTR, #frameBL{
